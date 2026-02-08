@@ -38,7 +38,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.rizero:shared-dto")
+                implementation(projects.sharedCoreUtils)
+                api("com.rizero:shared-dto")
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.bundles.ktor.multiplatform)
                 implementation(libs.bundles.koin.annotations)

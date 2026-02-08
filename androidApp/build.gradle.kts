@@ -11,6 +11,7 @@ plugins {
 kotlin {
     dependencies {
         implementation(projects.sharedCoreNetwork)
+        implementation(projects.sharedCoreDatasource)
         implementation(projects.composeApp)
         implementation(libs.compose.uiToolingPreview)
         implementation(libs.androidx.activity.compose)

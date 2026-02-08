@@ -1,0 +1,53 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "5d11e10273a8bdfad482df4981e3fc75",
+    "entities": [
+      {
+        "tableName": "users",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`phone` TEXT NOT NULL, `username` TEXT NOT NULL, `avatarPath` TEXT, PRIMARY KEY(`phone`))",
+        "fields": [
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatarPath",
+            "columnName": "avatarPath",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "phone"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_users_phone",
+            "unique": false,
+            "columnNames": [
+              "phone"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_users_phone` ON `${TABLE_NAME}` (`phone`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5d11e10273a8bdfad482df4981e3fc75')"
+    ]
+  }
+}

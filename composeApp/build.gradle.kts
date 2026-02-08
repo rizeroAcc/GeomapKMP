@@ -40,7 +40,10 @@ kotlin {
     
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":shared-core-network"))
+            implementation(projects.sharedCoreNetwork)
+            implementation(projects.sharedCoreDatasource)
+            implementation(projects.sharedCoreDatabase)
+
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
