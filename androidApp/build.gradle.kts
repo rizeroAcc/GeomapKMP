@@ -10,12 +10,15 @@ plugins {
 
 kotlin {
     dependencies {
-        implementation(projects.sharedCoreNetwork)
-        implementation(projects.sharedCoreDatasource)
         implementation(projects.composeApp)
+
+        implementation(libs.decompose.core)
+
         implementation(libs.compose.uiToolingPreview)
         implementation(libs.androidx.activity.compose)
+
         implementation(libs.bundles.koin.annotations)
+        implementation(libs.koin.android)
     }
     target {
         compilerOptions {

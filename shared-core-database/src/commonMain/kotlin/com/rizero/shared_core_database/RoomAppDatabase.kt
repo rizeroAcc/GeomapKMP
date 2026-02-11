@@ -4,6 +4,7 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
+import com.rizero.shared_core_database.dao.UserDAO
 import com.rizero.shared_core_database.entity.UserEntity
 
 @Database(
@@ -13,7 +14,7 @@ import com.rizero.shared_core_database.entity.UserEntity
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
-
+    abstract fun userDao() : UserDAO
 }
 
 // The Room compiler generates the `actual` implementations.

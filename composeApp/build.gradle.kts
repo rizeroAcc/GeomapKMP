@@ -1,6 +1,7 @@
-import com.android.build.api.dsl.androidLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.koin.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -29,13 +31,19 @@ kotlin {
     listOf(
         iosArm64(),
         iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "Geomap"
-            isStatic = true
+    )
+
+    targets
+        .filterIsInstance<KotlinNativeTarget>()
+        .filter { it.konanTarget.family == Family.IOS }
+        .forEach {
+            it.binaries.framework {
+                export(libs.decompose.core)
+                baseName = "Geomap"
+                isStatic = true
+            }
         }
-    }
-    
+
     jvm()
     
     sourceSets {
@@ -43,12 +51,20 @@ kotlin {
             implementation(projects.sharedCoreNetwork)
             implementation(projects.sharedCoreDatasource)
             implementation(projects.sharedCoreDatabase)
+            implementation(projects.sharedCoreComponent)
+            implementation(projects.sharedCoreData)
 
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
+            implementation(projects.featureAuthorization)
+            implementation(projects.featureRegistration)
+            implementation(projects.featureUserProfile)
+            implementation(projects.featureProjectSelect)
+
+            implementation(libs.decompose.core)
+            implementation(libs.decompose.extensions.compose)
+
+            implementation(libs.kotlinx.coroutines.core)
+
+            implementation(libs.bundles.compose.multiplatform)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
@@ -60,6 +76,9 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+        }
+        androidMain.dependencies{
+            implementation(libs.bundles.koin.annotations)
         }
     }
 }

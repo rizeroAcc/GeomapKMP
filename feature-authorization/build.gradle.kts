@@ -1,3 +1,4 @@
+import org.jetbrains.compose.resources.ResourcesExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
 
@@ -25,6 +26,10 @@ kotlin {
         }.configure {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
+
+        androidResources {
+            enable = true
+        }
     }
     val xcfName = "feature-authorizationKit"
 
@@ -50,6 +55,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
+
                 implementation(libs.bundles.mvikotlin.corutines)
                 implementation(libs.decompose.core)
                 implementation(libs.decompose.extensions.compose)
@@ -58,6 +64,8 @@ kotlin {
 
                 implementation(libs.bundles.koin.annotations)
                 implementation(libs.bundles.compose.multiplatform)
+                implementation(libs.compose.uiToolingPreview)
+
 
                 implementation(projects.sharedCoreData)
                 implementation(projects.sharedCoreComponent)

@@ -1,3 +1,7 @@
+import org.jetbrains.compose.resources.ResourcesExtension
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.konan.target.Family
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidMultiplatformLibrary)
@@ -22,30 +26,28 @@ kotlin {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
 
-
+        androidResources {
+            enable = true
+        }
     }
 
     val xcfName = "shared-core-componentKit"
 
     jvm()
-    iosX64 {
-        binaries.framework {
-            baseName = xcfName
-        }
-    }
+    iosX64 {}
 
-    iosArm64 {
-        binaries.framework {
-            baseName = xcfName
-        }
-    }
+    iosArm64 {}
 
-    iosSimulatorArm64 {
-        binaries.framework {
-            baseName = xcfName
+    iosSimulatorArm64 {}
+    targets
+        .filterIsInstance<KotlinNativeTarget>()
+        .filter { it.konanTarget.family == Family.IOS }
+        .forEach {
+            it.binaries.framework {
+                export(libs.decompose.core)
+                baseName = xcfName
+            }
         }
-    }
-
     sourceSets {
         commonMain {
             dependencies {
@@ -66,6 +68,7 @@ kotlin {
 
         androidMain {
             dependencies {
+                implementation(libs.compose.components.resources)
                 implementation(libs.bundles.compose.multiplatform.tooling)
             }
         }
@@ -89,9 +92,4 @@ kotlin {
             }
         }
     }
-
-}
-
-dependencies {
-    androidRuntimeClasspath("org.jetbrains.compose.ui:ui-tooling:1.10.0")
 }

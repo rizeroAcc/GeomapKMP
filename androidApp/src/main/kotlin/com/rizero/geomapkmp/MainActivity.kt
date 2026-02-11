@@ -7,31 +7,29 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.rizero.shared_core_datasource.api.AuthRemoteDatasource
-import com.rizero.shared_core_datasource.local.SessionLocalDatasource
-import com.rizero.shared_core_network.api.AuthAPI
+import com.arkivanov.decompose.defaultComponentContext
+import com.rizero.geomapkmp.flow.authentication.AuthenticationFlowComponent
+import com.rizero.geomapkmp.flow.project.ProjectFlowComponent
 import org.koin.java.KoinJavaComponent.inject
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        //tODO УБРАТЬ, ЭТО ДЛЯ ПРОВЕРКИ ЧТО KOIN РАБОТАЕТ
-        val authAPI : AuthAPI by inject(AuthAPI::class.java)
-        val authRemoteDatasource : AuthRemoteDatasource by inject(AuthRemoteDatasource::class.java)
-        val authLocalDatasource : SessionLocalDatasource by inject(SessionLocalDatasource::class.java)
-        Log.d("koin", authAPI.toString())
-        Log.d("koin",authLocalDatasource.toString())
-        Log.d("koin",authRemoteDatasource.toString())
+        val authenticationFlowComponentFactory : AuthenticationFlowComponent.ComponentFactory by inject(
+            AuthenticationFlowComponent.ComponentFactory::class.java
+        )
+        val projectFlowComponentFactory : ProjectFlowComponent.ComponentFactory by inject(
+            ProjectFlowComponent.ComponentFactory::class.java
+        )
         setContent {
-            App()
-
+            RootUI(
+                RootComponent(
+                    componentContext = defaultComponentContext(),
+                    authenticationFlowComponentFactory = authenticationFlowComponentFactory,
+                    projectFlowComponentFactory = projectFlowComponentFactory
+                )
+            )
         }
     }
-}
-
-@Preview
-@Composable
-fun AppAndroidPreview() {
-    App()
 }

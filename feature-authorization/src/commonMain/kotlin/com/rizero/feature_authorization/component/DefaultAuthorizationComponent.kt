@@ -14,7 +14,7 @@ import com.rizero.shared_core_data.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.Factory
 
 class DefaultAuthorizationComponent(
     componentContext : ComponentContext,
@@ -63,8 +63,8 @@ class DefaultAuthorizationComponent(
         store.accept(AuthorizationStore.Intent.Authorize)
     }
 
-    @Single
-    class Factory(
+    @Factory
+    class ComponentFactory(
         private val sessionRepository: SessionRepository,
         private val userRepository: UserRepository,
     ) : AuthorizationComponent.Factory {
