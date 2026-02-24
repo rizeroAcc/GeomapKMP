@@ -21,22 +21,11 @@ class DefaultAuthorizationComponent(
     private val sessionRepository: SessionRepository,
     private val userRepository: UserRepository,
     private val storeFactory: StoreFactory = DefaultStoreFactory(),
-    private val _onRegistrationClick : ()-> Unit,
-    private val onAuthorizationComplete : () -> Unit,
+    private val navigateToRegistration : ()-> Unit,
+    private val authorizationCompleteCallback : () -> Unit,
+    val userPhone: String? = null,
 ) : AuthorizationComponent,ComponentContext by componentContext {
     val scope = coroutineScope(Dispatchers.Main)
-
-    init {
-        scope.launch {
-            labels.collect { label->
-                when (label) {
-                    is AuthorizationStore.Label.SuccessfulLogIn -> {
-                        onAuthorizationComplete()
-                    }
-                }
-            }
-        }
-    }
     private val store : AuthorizationStore = instanceKeeper.getStore {
         AuthorizationStoreFactory(
             storeFactory = storeFactory,
@@ -44,6 +33,22 @@ class DefaultAuthorizationComponent(
             userRepository = userRepository
         ).create()
     }
+
+    init {
+        scope.launch {
+            labels.collect { label->
+                when (label) {
+                    is AuthorizationStore.Label.SuccessfulLogIn -> {
+                        authorizationCompleteCallback()
+                    }
+                }
+            }
+        }
+        userPhone?.let {
+            store.accept(AuthorizationStore.Intent.ChangePhone(it))
+        }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override val stateFlow = store.stateFlow(lifecycle)
     override val labels = store.labels
@@ -56,7 +61,7 @@ class DefaultAuthorizationComponent(
 
 
     override fun onRegistrationClick() {
-        _onRegistrationClick()
+        navigateToRegistration()
     }
 
     override fun onLogInClick() {
@@ -70,14 +75,16 @@ class DefaultAuthorizationComponent(
     ) : AuthorizationComponent.Factory {
         override fun invoke(
             componentContext: ComponentContext,
-            onAuthorizationComplete: () -> Unit,
-            onRegistrationClick: () -> Unit
+            authorizationCompleteCallback: () -> Unit,
+            navigateToRegistration: () -> Unit,
+            userPhone : String?,
         ): AuthorizationComponent = DefaultAuthorizationComponent(
             componentContext = componentContext,
             sessionRepository = sessionRepository,
             userRepository = userRepository,
-            _onRegistrationClick = onRegistrationClick,
-            onAuthorizationComplete = onAuthorizationComplete,
+            navigateToRegistration = navigateToRegistration,
+            authorizationCompleteCallback = authorizationCompleteCallback,
+            userPhone = userPhone
         )
     }
 }

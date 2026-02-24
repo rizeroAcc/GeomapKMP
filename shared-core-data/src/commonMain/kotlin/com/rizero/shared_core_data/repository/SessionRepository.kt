@@ -1,11 +1,19 @@
 package com.rizero.shared_core_data.repository
 
+import com.mapprjct.model.datatype.Password
+import com.mapprjct.model.datatype.RussiaPhoneNumber
+import com.mapprjct.model.datatype.Username
+import com.mapprjct.model.dto.User
 import com.mapprjct.model.dto.UserCredentials
 import com.rizero.shared_core_data.exceptions.LogInError
+import com.rizero.shared_core_data.exceptions.LogOutError
+import com.rizero.shared_core_data.exceptions.RegistrationError
 import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.model.UserModel
-import com.rizero.shared_core_datasource.api.AuthRemoteDatasource
+import com.rizero.shared_core_datasource.remote.AuthRemoteDatasource
 import com.rizero.shared_core_datasource.exception.auth.SignInError
+import com.rizero.shared_core_datasource.exception.auth.SignOutError
+import com.rizero.shared_core_datasource.exception.auth.SignUpError
 import com.rizero.shared_core_datasource.local.SessionLocalDatasource
 import com.rizero.shared_core_utils.Either
 import com.rizero.shared_core_utils.fold
@@ -17,7 +25,7 @@ class SessionRepository(
     private val authRemoteDatasource: AuthRemoteDatasource,
 ) {
     suspend fun logInUser(phone : String, password : String) : Either<UserModel, LogInError> {
-        val credentials = UserCredentials(phone,password)
+        val credentials = UserCredentials(RussiaPhoneNumber(phone), Password(password))
         return authRemoteDatasource.signIn(credentials).fold(
             onSuccess = { userSession->
                 sessionLocalDatasource.saveCurrentSession(userSession)
@@ -34,9 +42,52 @@ class SessionRepository(
         )
     }
 
-    suspend fun RegisterUser(){TODO()}
-    suspend fun logOutUser(){TODO()}
-    suspend fun refreshSession(){TODO()}
+    suspend fun registerUser(phone: String, password: String, username: String) : Either<UserModel, RegistrationError>{
+        val userCredentials = UserCredentials(phone = RussiaPhoneNumber(phone), password = Password(password))
+        return authRemoteDatasource.signUp(
+            username = Username(username),
+            credentials = userCredentials
+        ).fold(
+            onSuccess = { user->
+                Either.success(UserModel.fromUserDTO(user))
+            },
+            onNetworkError = {
+                Either.failure(RegistrationError.ConnectionError())
+            },
+            onFailure = { error ->
+                when(error){
+                    is SignUpError.InternalServerError,
+                    is SignUpError.UnexpectedServerError -> Either.failure(RegistrationError.ServerError())
+                    is SignUpError.UserAlreadyRegistered -> Either.failure(RegistrationError.UserAlreadyExists(phone))
+                }
+            }
+        )
+    }
+    suspend fun logOutUser() : Either<Unit, LogOutError>{
+        val currentSession = getCurrentSession() ?: return Either.success(Unit)
+        return authRemoteDatasource.logOut(currentSession.token.value).fold(
+            onSuccess = {
+                sessionLocalDatasource.clearCurrentSession()
+                Either.success(Unit)
+            },
+            onNetworkError = {
+                Either.failure(LogOutError.ConnectionError())
+            },
+            onFailure = { error ->
+                when(error){
+                    is SignOutError.InternalServerError -> Either.failure(LogOutError.ServerError())
+                    is SignOutError.SessionAlreadyNotActive -> Either.success(Unit)
+                    is SignOutError.UnexpectedServerResponse -> Either.failure(LogOutError.UnexpectedResponse())
+                }
+            }
+        )
+    }
+
+    suspend fun clearActiveSession() {
+        sessionLocalDatasource.clearCurrentSession()
+    }
+
+    suspend fun refreshSession(){TODO("Пока не написано на сервере")}
 
     suspend fun getCurrentSession() : Session?{
         return sessionLocalDatasource.getCurrentSession()?.let {

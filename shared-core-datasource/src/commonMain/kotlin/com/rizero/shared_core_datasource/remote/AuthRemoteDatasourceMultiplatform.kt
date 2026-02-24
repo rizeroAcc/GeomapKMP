@@ -1,10 +1,12 @@
-package com.rizero.shared_core_datasource.api
+package com.rizero.shared_core_datasource.remote
 
+import com.mapprjct.model.datatype.Username
 import com.mapprjct.model.dto.User
 import com.mapprjct.model.dto.UserCredentials
 import com.mapprjct.model.response.auth.RegistrationResponse
 import com.mapprjct.model.response.auth.SignInResponse
 import com.rizero.shared_core_datasource.exception.auth.SignInError
+import com.rizero.shared_core_datasource.exception.auth.SignOutError
 import com.rizero.shared_core_datasource.exception.auth.SignUpError
 import com.rizero.shared_core_network.api.AuthAPI
 import com.rizero.shared_core_network.model.ErrorResponse
@@ -19,10 +21,6 @@ import org.koin.core.annotation.Single
 class AuthRemoteDatasourceMultiplatform(
     val authAPI: AuthAPI
 ) : AuthRemoteDatasource {
-    /**
-     * @throws ConnectionException - if network interrupted
-     * @throws SignInError - if request failed
-     * */
     override suspend fun signIn(credentials: UserCredentials) : NetworkResult<UserSession, SignInError> {
         return defaultNetworkCall<SignInResponse, UserSession, SignInError>(
             call = { authAPI.signIn(credentials) },
@@ -36,7 +34,7 @@ class AuthRemoteDatasourceMultiplatform(
                 when(statusCode){
                     HttpStatusCode.InternalServerError -> {
                         val errorResponse = response.bodySafely<ErrorResponse>()
-                        SignInError.InternalServerError(errorResponse?.detailedMessage)
+                        SignInError.InternalServerError(errorResponse?.message)
                     }
                     HttpStatusCode.Unauthorized -> {
                         SignInError.InvalidCredentialsError()
@@ -46,7 +44,7 @@ class AuthRemoteDatasourceMultiplatform(
             }
         )
     }
-    override suspend fun signUp(username : String, credentials: UserCredentials) : NetworkResult<User, SignUpError>{
+    override suspend fun signUp(username : Username, credentials: UserCredentials) : NetworkResult<User, SignUpError>{
         return defaultNetworkCall<RegistrationResponse, User, SignUpError>(
             call = {
                 authAPI.signUp(username, credentials)
@@ -63,7 +61,19 @@ class AuthRemoteDatasourceMultiplatform(
             }
         )
     }
-    override suspend fun logOut(token : String) : NetworkResult<Unit, Throwable>{
-        TODO()
+    override suspend fun logOut(token : String) : NetworkResult<Unit, SignOutError>{
+        return defaultNetworkCall<Unit,Unit, SignOutError>(
+            call = {
+                authAPI.signOut(token)
+            },
+            onRequestSuccess = { _,_ -> },
+            onRequestFailure = { status, _ ->
+                when(status){
+                    HttpStatusCode.InternalServerError -> SignOutError.InternalServerError()
+                    HttpStatusCode.NotFound -> SignOutError.SessionAlreadyNotActive()
+                    else -> SignOutError.UnexpectedServerResponse()
+                }
+            }
+        )
     }
 }

@@ -11,8 +11,8 @@ data class UserModel(
     companion object {
         fun fromUserDTO(userDTO: User) : UserModel {
             return UserModel(
-                phone = userDTO.phone,
-                username = userDTO.username,
+                phone = userDTO.phone.value,
+                username = userDTO.username.value,
                 avatarFilename = userDTO.avatarFilename,
             )
         }

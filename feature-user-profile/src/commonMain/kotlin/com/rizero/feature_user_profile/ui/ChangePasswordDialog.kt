@@ -4,12 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
-fun ChangeProfileDialog(){
+fun ChangePasswordDialog(){
 
 }
 
 @Composable
 @Preview(showBackground = true)
-fun ChangeProfileDialogPreview(){
-    ChangeProfileDialog()
+fun ChangePasswordDialogPreview(){
+    ChangePasswordDialog()
 }

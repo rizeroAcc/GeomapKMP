@@ -1,4 +1,4 @@
-package com.rizero.di
+package com.rizero.shared_core_database.di
 
 import androidx.room.Room
 import androidx.room.RoomDatabase

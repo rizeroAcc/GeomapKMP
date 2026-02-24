@@ -34,9 +34,16 @@ interface AuthorizationStore : Store<AuthorizationStore.Intent, AuthorizationSto
     data class State(
         val phoneNumber : String = "",
         val password : String = "",
-        val errorMessage : String = "",
+        val error : AuthorizationError? = null,
         val isLoading : Boolean = false,
     )
+    sealed interface AuthorizationError{
+        object InvalidCredentials : AuthorizationError
+        object NetworkUnavailable : AuthorizationError
+        object ServerError : AuthorizationError
+        object IncorrectPhoneInput : AuthorizationError
+        object IncorrectPasswordInput : AuthorizationError
+    }
 }
 
 class AuthorizationStoreFactory(
@@ -62,7 +69,7 @@ class AuthorizationStoreFactory(
     private sealed class Message {
         data object AuthorizationCompleted : Message()
         data object AuthorizationInProcess : Message()
-        data class AuthorizationFailed(val errorMessage: String) : Message()
+        data class AuthorizationFailed(val error: AuthorizationStore.AuthorizationError) : Message()
         data class PasswordChanged(val newPassword : String) : Message()
         data class PhoneChanged(val newPhone : String) : Message()
     }
@@ -119,8 +126,10 @@ class AuthorizationStoreFactory(
             when(action){
                 ValidateInput -> {
                     if (!validatePhone(state.phoneNumber)) {
-                        dispatch(AuthorizationFailed(errorMessage = "Incorrect phone number"))
-                    }else{
+                        dispatch(AuthorizationFailed(AuthorizationStore.AuthorizationError.IncorrectPhoneInput))
+                    }else if(!validatePassword(state.password)){
+                        dispatch(AuthorizationFailed(AuthorizationStore.AuthorizationError.IncorrectPasswordInput))
+                    } else{
                         dispatch(AuthorizationInProcess)
                         forward(AuthorizeUser(phone = state.phoneNumber, password = state.password))
                     }
@@ -141,13 +150,12 @@ class AuthorizationStoreFactory(
                                 onError = { error->
                                     when(error){
                                         is LogInError.ConnectionError ->
-                                            dispatch(AuthorizationFailed("Network unavailable"))
+                                            dispatch(AuthorizationFailed(AuthorizationStore.AuthorizationError.NetworkUnavailable))
                                         is LogInError.InvalidCredentials ->
-                                            dispatch(AuthorizationFailed("Invalid username or password"))
-                                        is LogInError.ServerError ->
-                                            dispatch(AuthorizationFailed("Server unavailable"))
+                                            dispatch(AuthorizationFailed(AuthorizationStore.AuthorizationError.InvalidCredentials))
+                                        is LogInError.ServerError,
                                         is LogInError.UnexpectedResponse ->
-                                            dispatch(AuthorizationFailed("Server error"))
+                                            dispatch(AuthorizationFailed(AuthorizationStore.AuthorizationError.ServerError))
                                     }
                                 }
                             )
@@ -169,16 +177,25 @@ class AuthorizationStoreFactory(
             }
             return false
         }
+        private fun validatePassword(password: String) : Boolean{
+            return password.isNotBlank() && password.length >= 8
+        }
     }
 
     private object ReducerImpl : Reducer<AuthorizationStore.State, Message> {
         override fun AuthorizationStore.State.reduce(msg: Message): AuthorizationStore.State {
             return when(msg){
-                is AuthorizationFailed -> copy(errorMessage = msg.errorMessage, isLoading = false)
+                is AuthorizationFailed -> {
+                    if (msg.error is AuthorizationStore.AuthorizationError.IncorrectPasswordInput){
+                        copy(error = AuthorizationStore.AuthorizationError.InvalidCredentials, isLoading = false)
+                    }else{
+                        copy(error = msg.error, isLoading = false)
+                    }
+                }
                 is PhoneChanged -> copy(phoneNumber = msg.newPhone)
                 is PasswordChanged -> copy(password = msg.newPassword)
                 AuthorizationCompleted -> copy(isLoading = false)
-                AuthorizationInProcess -> copy(isLoading = true)
+                AuthorizationInProcess -> copy(isLoading = true, error = null)
             }
         }
     }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +39,7 @@ import geomapkmp.feature_registration.generated.resources.AppLogo
 import geomapkmp.feature_registration.generated.resources.Res
 import geomapkmp.feature_registration.generated.resources.arrow_backx
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RegistrationScreen(registrationComponent: RegistrationComponent){
@@ -64,7 +66,7 @@ fun RegistrationScreen(registrationComponent: RegistrationComponent){
             Image(
                 painter = painterResource(Res.drawable.AppLogo),
                 contentDescription = "Application logo",
-                modifier = Modifier.fillMaxWidth(0.6f)
+                modifier = Modifier.size(250.dp)
             )
             DefaultTextField(
                 inputType = InputType.Phone,
@@ -104,13 +106,14 @@ fun RegistrationScreen(registrationComponent: RegistrationComponent){
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            if (!screenState.errorMessage.isBlank()){
+            screenState.error?.let {
                 Text(
                     modifier = Modifier.padding(top = 12.dp),
-                    text = screenState.errorMessage,
+                    text = getErrorText(it),
                     color = Color.Red
                 )
             }
+
 
             Button(
                 colors = ButtonDefaults.buttonColors(
@@ -141,13 +144,37 @@ fun RegistrationScreen(registrationComponent: RegistrationComponent){
     }
 }
 
+private fun getErrorText(error: RegistrationStore.RegistrationError) : String{
+    //TODO move to string resources
+    return when(error){
+        RegistrationStore.RegistrationError.InvalidPassword.InvalidLength ->
+            "Password must have length at least 8 symbols"
+        RegistrationStore.RegistrationError.InvalidPassword.PasswordBlank ->
+            "Password must not be blank"
+        RegistrationStore.RegistrationError.InvalidPassword.RepeatedPasswordNotMatches ->
+            "Password and repeated password must match"
+        RegistrationStore.RegistrationError.InvalidPhoneFormat.InvalidPhoneLength ->
+            "Invalid phone length"
+        RegistrationStore.RegistrationError.InvalidPhoneFormat.PhoneIsNotRussian ->
+            "Phone must match russian standart "
+        RegistrationStore.RegistrationError.InvalidUsername.BlankUsername ->
+            "Username must not be blank"
+        RegistrationStore.RegistrationError.NetworkError ->
+            "Network unavailable"
+        RegistrationStore.RegistrationError.ServerError ->
+            "Server error. Try later"
+        RegistrationStore.RegistrationError.UserAlreadyRegistered ->
+            "User with entered phone already registered"
+    }
+}
+
 @Composable
 @Preview(showBackground = true)
 fun RegistrationScreenPreview(){
     RegistrationScreen(
         registrationComponent = MockRegistrationComponent(
             state = RegistrationStore.State(
-                errorMessage = "Some error"
+                error = RegistrationStore.RegistrationError.NetworkError
             )
         )
     )

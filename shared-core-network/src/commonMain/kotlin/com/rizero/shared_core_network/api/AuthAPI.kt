@@ -1,5 +1,6 @@
 package com.rizero.shared_core_network.api
 
+import com.mapprjct.model.datatype.Username
 import com.mapprjct.model.dto.UserCredentials
 import com.mapprjct.model.request.auth.RegistrationRequest
 import com.mapprjct.model.request.auth.SignInRequest
@@ -12,14 +13,20 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import org.koin.core.annotation.Single
 
+interface AuthAPI {
+    suspend fun signIn(credentials: UserCredentials) : HttpResponse
+    suspend fun signOut(token : String) : HttpResponse
+    suspend fun signUp(username : Username, credentials: UserCredentials) : HttpResponse
+}
+
 @Single
-class AuthAPI(val client : HttpClient) {
+class DefaultAuthAPI(val client : HttpClient) : AuthAPI {
     /**
      * @throws io.ktor.client.network.sockets.ConnectTimeoutException подключение не удалось за 10с
      * @throws HttpRequestTimeoutException между запросом и ответом прошло 10с
      * @throws io.ktor.network.sockets.SocketTimeoutException чтение данных прервано за 10с
      * */
-    suspend fun signIn(credentials: UserCredentials) : HttpResponse {
+    override suspend fun signIn(credentials: UserCredentials) : HttpResponse {
         val request = SignInRequest(
             phone = credentials.phone,
             password = credentials.password
@@ -29,7 +36,7 @@ class AuthAPI(val client : HttpClient) {
             setBody(request)
         }
     }
-    suspend fun signUp(username : String, credentials: UserCredentials) : HttpResponse{
+    override suspend fun signUp(username : Username, credentials: UserCredentials) : HttpResponse{
         val request = RegistrationRequest(
             phone = credentials.phone,
             username = username,
@@ -40,7 +47,7 @@ class AuthAPI(val client : HttpClient) {
             setBody(request)
         }
     }
-    suspend fun signOut(token : String) : HttpResponse {
+    override suspend fun signOut(token : String) : HttpResponse {
         return client.post("/logout") {
             headers.append("Authorization", token)
         }

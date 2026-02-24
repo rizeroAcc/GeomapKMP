@@ -33,10 +33,11 @@ class  NetworkModule{
                 socketTimeoutMillis = 10_000L
             }
             defaultRequest {
-                host = "10.0.2.2:8080"
+                host = provideBaseUrl()
             }
         }
     }
 }
 
 expect fun provideHttpClient(config : HttpClientConfig<*>.() -> Unit) : HttpClient
+expect fun provideBaseUrl() : String

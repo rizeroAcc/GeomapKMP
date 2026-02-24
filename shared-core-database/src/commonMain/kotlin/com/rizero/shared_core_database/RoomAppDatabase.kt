@@ -5,11 +5,17 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import com.rizero.shared_core_database.dao.UserDAO
+import com.rizero.shared_core_database.entity.ProjectEntity
+import com.rizero.shared_core_database.entity.ProjectMembership
 import com.rizero.shared_core_database.entity.UserEntity
 
 @Database(
-    entities = [UserEntity::class],
-    version = 1,
+    entities = [
+        UserEntity::class,
+        ProjectEntity::class,
+        ProjectMembership::class,
+               ],
+    version = 2,
     exportSchema = true
 )
 @ConstructedBy(AppDatabaseConstructor::class)

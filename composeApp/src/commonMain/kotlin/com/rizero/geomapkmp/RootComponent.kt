@@ -25,7 +25,7 @@ class RootComponent(
     fun startProjectFlow(){
         navigation.replaceAll(ScreenConfig.Project)
     }
-    fun startAuthenticationFlow(){
+    fun resetUserSession(){
         navigation.replaceAll(ScreenConfig.Authentication)
     }
     fun createChild(
@@ -41,7 +41,8 @@ class RootComponent(
             )
             ScreenConfig.Project -> Child.Project(
                 projectFlowComponentFactory(
-                    componentContext
+                    componentContext,
+                    logOutCallback = ::resetUserSession
                 )
             )
         }

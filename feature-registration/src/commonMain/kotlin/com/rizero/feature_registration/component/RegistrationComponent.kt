@@ -2,6 +2,7 @@ package com.rizero.feature_registration.component
 
 import com.arkivanov.decompose.ComponentContext
 import com.rizero.feature_registration.RegistrationStore
+import com.rizero.shared_core_data.model.UserModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -17,8 +18,8 @@ interface RegistrationComponent {
     fun interface Factory{
         operator fun invoke(
             componentContext : ComponentContext,
-            onRegistrationCompleted : ()->Unit,
-            onBackClick : ()->Unit,
+            onRegistrationCompleted : (user : UserModel) -> Unit,
+            navigateBack : () -> Unit,
         ) : RegistrationComponent
     }
 }

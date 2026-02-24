@@ -1,4 +1,4 @@
-package com.rizero.di
+package com.rizero.shared_core_database.di
 
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -17,9 +17,11 @@ import org.koin.core.annotation.Single
 class DatabaseModule {
     @Single
     fun provideAppDatabase() : AppDatabase {
+        //todo убрать fallback на релизе
         return getDatabaseBuilder()
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
+            .fallbackToDestructiveMigration(true)
             .build()
     }
     @Single

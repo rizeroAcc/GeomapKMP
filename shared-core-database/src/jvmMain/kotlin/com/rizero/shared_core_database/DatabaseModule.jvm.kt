@@ -1,9 +1,8 @@
-package com.rizero.di
+package com.rizero.shared_core_database.di
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.rizero.shared_core_database.AppDatabase
-import java.io.File
 import java.nio.file.Paths
 
 actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {

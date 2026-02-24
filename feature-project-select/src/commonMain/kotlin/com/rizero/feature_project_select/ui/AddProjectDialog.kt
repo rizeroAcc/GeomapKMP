@@ -35,7 +35,7 @@ import com.rizero.shared_core_component.ui.TwoSegmentSwitch
 import com.rizero.shared_core_component.ui.TwoSegmentSwitchPosition
 
 @Composable
-fun ProjectCreationDialog(
+fun CreateProjectDialog(
     addProjectDialogComponent: AddProjectDialogComponent
 ){
     val state by addProjectDialogComponent.stateFlow.collectAsState()
@@ -158,8 +158,8 @@ fun ProjectCreationDialog(
 
 @Preview
 @Composable
-fun ProjectCreationDialogNewPreview(){
-    ProjectCreationDialog(
+fun CreateProjectDialogNewPreview(){
+    CreateProjectDialog(
         MockAddProjectDialogComponent(
             state = AddProjectDialogStore.State(
                 projectSelectorState = ProjectSelectorState.NEW_PROJECT,
@@ -172,8 +172,8 @@ fun ProjectCreationDialogNewPreview(){
 
 @Preview
 @Composable
-fun ProjectCreationDialogJoinPreview(){
-    ProjectCreationDialog(
+fun CreateProjectDialogJoinPreview(){
+    CreateProjectDialog(
         MockAddProjectDialogComponent(
             state = AddProjectDialogStore.State(
                 projectSelectorState = ProjectSelectorState.JOIN_PROJECT,

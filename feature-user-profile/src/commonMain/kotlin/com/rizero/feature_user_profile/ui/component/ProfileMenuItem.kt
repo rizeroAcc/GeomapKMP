@@ -1,4 +1,4 @@
-package com.rizero.feature_user_profile.ui
+package com.rizero.feature_user_profile.ui.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -29,7 +29,7 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 fun ProfileMenuItem(
     itemText : String,
-    onItemClick : () -> Unit = {},
+    onItemClick : () -> Unit,
     modifier: Modifier = Modifier
 ){
     Box(
@@ -80,12 +80,14 @@ fun ProfileMenuItemPreview(){
     ) {
         ProfileMenuItem(
             itemText = "Изменить пароль",
+            onItemClick = {},
             modifier = Modifier
                 .padding(top = 8.dp)
                 .height(40.dp)
         )
         ProfileMenuItem(
             itemText = "Редактировать имя пользователя",
+            onItemClick = {},
             modifier = Modifier.height(40.dp)
         )
     }

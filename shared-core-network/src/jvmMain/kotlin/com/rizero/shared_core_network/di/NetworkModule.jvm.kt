@@ -19,3 +19,5 @@ actual fun provideHttpClient(config : HttpClientConfig<*>.() -> Unit): HttpClien
         }
     }
 }
+
+actual fun provideBaseUrl(): String = "192.168.10.237:8080"

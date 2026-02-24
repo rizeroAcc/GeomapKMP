@@ -4,8 +4,15 @@ import com.arkivanov.mvikotlin.core.store.Reducer
 import com.arkivanov.mvikotlin.core.store.Store
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
+import com.rizero.shared_core_data.exceptions.RegistrationError
+import com.rizero.shared_core_data.model.UserModel
+import com.rizero.shared_core_data.repository.SessionRepository
+import com.rizero.shared_core_utils.fold
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 interface RegistrationStore : Store<RegistrationStore.Intent, RegistrationStore.State, RegistrationStore.Label> {
     data class State(
@@ -14,30 +21,49 @@ interface RegistrationStore : Store<RegistrationStore.Intent, RegistrationStore.
         val password : String = "",
         val repeatedPassword : String = "",
         val performingRegistration : Boolean = false,
-        val errorMessage: String = "",
+        val error: RegistrationError? = null,
     )
+
+    sealed interface RegistrationError{
+        sealed class InvalidPhoneFormat {
+            object InvalidPhoneLength : RegistrationError
+            object PhoneIsNotRussian : RegistrationError
+        }
+        sealed class InvalidPassword {
+            object InvalidLength : RegistrationError
+            object PasswordBlank : RegistrationError
+            object RepeatedPasswordNotMatches : RegistrationError
+        }
+        sealed class InvalidUsername {
+            object BlankUsername : RegistrationError
+        }
+        object UserAlreadyRegistered : RegistrationError
+        object ServerError : RegistrationError
+        object NetworkError : RegistrationError
+    }
 
     sealed interface Intent{
         data class PhoneChanged(val newPhone : String) : Intent
         data class UsernameChanged(val newUsername : String) : Intent
         data class PasswordChanged(val newPassword : String) : Intent
         data class RepeatedPasswordChanged (val newRepeatedPassword : String) :  Intent
-        data object Register : Intent
+        data object PerformRegister : Intent
     }
 
     sealed interface Label{
-        data object RegistrationComplete : Label
+        data class RegistrationComplete(val registeredUser : UserModel) : Label
     }
 }
 
 class RegistrationStoreFactory(
+    private val sessionRepository: SessionRepository,
     private val storeFactory: StoreFactory
 ){
     fun create() : RegistrationStore =
         object : RegistrationStore, Store<RegistrationStore.Intent, RegistrationStore.State, RegistrationStore.Label> by storeFactory.create(
             name = "RegistrationStore",
             initialState = RegistrationStore.State(),
-            executorFactory = ::ExecutorImpl,
+            executorFactory = { ExecutorImpl(sessionRepository) },
             reducer = ReducerImpl,
         ){}
 
@@ -54,12 +80,13 @@ class RegistrationStoreFactory(
         data class UsernameChanged(val newUsername : String) : Message()
         data class PasswordChanged(val newPassword : String) : Message()
         data class RepeatedPasswordChanged(val newRepeatedPassword : String) : Message()
-
         data object RegistrationStarted : Message()
-        data class ErrorOccured(val errorMessage : String) : Message()
+        data class ErrorOccured(val error : RegistrationStore.RegistrationError) : Message()
     }
 
-    private class ExecutorImpl() : CoroutineExecutor<RegistrationStore.Intent, Action, RegistrationStore.State, Message, RegistrationStore.Label>(){
+    private class ExecutorImpl(
+        val sessionRepository: SessionRepository
+    ) : CoroutineExecutor<RegistrationStore.Intent, Action, RegistrationStore.State, Message, RegistrationStore.Label>(){
         override fun executeIntent(intent: RegistrationStore.Intent) {
             when(intent){
                 is RegistrationStore.Intent.PasswordChanged -> {
@@ -74,35 +101,46 @@ class RegistrationStoreFactory(
                 is RegistrationStore.Intent.UsernameChanged -> {
                     dispatch(Message.UsernameChanged(intent.newUsername))
                 }
-                RegistrationStore.Intent.Register -> {
+                RegistrationStore.Intent.PerformRegister -> {
                     forward(Action.ValidateInput)
                 }
             }
         }
 
-        //TODO Возвращать ошибки строками плохо, пробрасывай объект и по нему читай строковый ресурс
         override fun executeAction(action: Action) {
             val state = state()
             when(action){
                 is Action.RegisterNewUser -> {
                     dispatch(Message.RegistrationStarted)
-                    scope.launch {
-                        delay(1500)
-                        publish(RegistrationStore.Label.RegistrationComplete)
+                    scope.launch(Dispatchers.IO) {
+                        sessionRepository.registerUser(
+                            phone = action.phone,
+                            password = action.password,
+                            username = action.username).fold(
+                            onSuccess = { registeredUser ->
+                                withContext(Dispatchers.Main){
+                                    publish(RegistrationStore.Label.RegistrationComplete(registeredUser))
+                                }
+                            },
+                            onError = { error->
+                                withContext(Dispatchers.Main){
+                                    when(error){
+                                        is RegistrationError.ConnectionError ->
+                                            dispatch(Message.ErrorOccured(RegistrationStore.RegistrationError.NetworkError))
+                                        is RegistrationError.ServerError ->
+                                            dispatch(Message.ErrorOccured(RegistrationStore.RegistrationError.ServerError))
+                                        is RegistrationError.UserAlreadyExists ->
+                                            dispatch(Message.ErrorOccured(RegistrationStore.RegistrationError.UserAlreadyRegistered))
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
                 Action.ValidateInput -> {
-                    if (!validatePhone(state.phone)) {
-                        dispatch(Message.ErrorOccured("Incorrect phone number"))
-                    }
-                    else if (state.username.isBlank()) {
-                        dispatch(Message.ErrorOccured("Username is blank"))
-                    }
-                    else if (state.password.isBlank()) {
-                        dispatch(Message.ErrorOccured("Password is empty"))
-                    }
-                    else if (state.password != state.repeatedPassword) {
-                        dispatch(Message.ErrorOccured("Incorrect repeated password"))
+                    val validationError = validateRegistrationData(state)
+                    if (validationError != null) {
+                        dispatch(Message.ErrorOccured(validationError))
                     }else{
                         forward(Action.RegisterNewUser(
                             username = state.username,
@@ -112,9 +150,31 @@ class RegistrationStoreFactory(
                     }
                 }
             }
+    }
+
+        private fun validateRegistrationData(state: RegistrationStore.State): RegistrationStore.RegistrationError? = when {
+            !(state.phone.startsWith("+7") || state.phone.startsWith("8")) ->
+                RegistrationStore.RegistrationError.InvalidPhoneFormat.PhoneIsNotRussian
+
+            !validateRussiaPhoneLength(state.phone) ->
+                RegistrationStore.RegistrationError.InvalidPhoneFormat.InvalidPhoneLength
+
+            state.username.isBlank() ->
+                RegistrationStore.RegistrationError.InvalidUsername.BlankUsername
+
+            state.password.isBlank() ->
+                RegistrationStore.RegistrationError.InvalidPassword.PasswordBlank
+
+            state.password.length < 8 ->
+                RegistrationStore.RegistrationError.InvalidPassword.InvalidLength
+
+            state.password != state.repeatedPassword ->
+                RegistrationStore.RegistrationError.InvalidPassword.RepeatedPasswordNotMatches
+
+            else -> null
         }
 
-        private fun validatePhone(phone : String) : Boolean{
+        private fun validateRussiaPhoneLength(phone : String) : Boolean{
             if (phone.startsWith("+7")){
                 return phone.length == 12
             }else if (phone.startsWith("8")){
@@ -131,8 +191,8 @@ class RegistrationStoreFactory(
                 is Message.PhoneChanged -> copy(phone = msg.newPhone)
                 is Message.RepeatedPasswordChanged -> copy(repeatedPassword = msg.newRepeatedPassword)
                 is Message.UsernameChanged -> copy(username = msg.newUsername)
-                is Message.ErrorOccured -> copy(performingRegistration = false, errorMessage = msg.errorMessage)
-                Message.RegistrationStarted -> copy(performingRegistration = true, errorMessage = "")
+                is Message.ErrorOccured -> copy(performingRegistration = false, error = msg.error)
+                Message.RegistrationStarted -> copy(performingRegistration = true, error = null)
             }
         }
     }

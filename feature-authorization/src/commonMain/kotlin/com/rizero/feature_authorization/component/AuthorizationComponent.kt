@@ -17,8 +17,9 @@ interface AuthorizationComponent {
     fun interface Factory {
         operator fun invoke( // 2
             componentContext: ComponentContext,
-            onAuthorizationComplete: () -> Unit,
-            onRegistrationClick: () -> Unit,
+            authorizationCompleteCallback: () -> Unit,
+            navigateToRegistration: () -> Unit,
+            userPhone : String?,
         ): AuthorizationComponent
     }
 

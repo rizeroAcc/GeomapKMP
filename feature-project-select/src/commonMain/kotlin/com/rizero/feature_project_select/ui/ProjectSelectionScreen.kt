@@ -87,7 +87,7 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
     addProjectDialog.child?.instance?.let { dialogComponent ->
         Dialog(onDismissRequest = projectSelectionComponent::closeAddProjectDialog
         ) {
-            ProjectCreationDialog(dialogComponent)
+            CreateProjectDialog(dialogComponent)
         }
     }
 }

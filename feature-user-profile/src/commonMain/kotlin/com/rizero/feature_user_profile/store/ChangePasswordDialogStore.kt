@@ -14,7 +14,7 @@ interface ChangePasswordDialogStore : Store<Intent, State, Label>{
         val newPassword : String = "",
         val repeatNewPassword : String = "",
         val passwordChangeInProcess : Boolean = false,
-        val errorText : Any? //TODO Передавать sealed классом, UI сам решит как обработать
+        val errorText : Any? = null//TODO Передавать sealed классом, UI сам решит как обработать
     )
     sealed interface Intent{
         data class ChangeOldPasswordText(val newValue : String) : Intent

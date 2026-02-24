@@ -10,6 +10,8 @@ import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.rizero.feature_registration.RegistrationStore
 import com.rizero.feature_registration.RegistrationStoreFactory
+import com.rizero.shared_core_data.model.UserModel
+import com.rizero.shared_core_data.repository.SessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,21 +19,24 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.Factory
-import org.koin.core.annotation.Single
 
 class DefaultRegistrationComponent (
     componentContext : ComponentContext,
     private val storeFactory: StoreFactory = DefaultStoreFactory(),
-    val onRegistrationCompleted : ()->Unit,
-    val onBackButtonAction : ()->Unit
+    private val sessionRepository: SessionRepository,
+    val onRegistrationCompleted : (user : UserModel) -> Unit,
+    val navigateBack : ()->Unit
 ) : RegistrationComponent, ComponentContext by componentContext {
 
     private val backCallback = BackCallback {
-        onBackButtonAction()
+        navigateBack()
     }
     private val componentScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val store = instanceKeeper.getStore {
-        RegistrationStoreFactory(storeFactory).create()
+        RegistrationStoreFactory(
+            storeFactory = storeFactory,
+            sessionRepository = sessionRepository
+        ).create()
     }
 
     init {
@@ -42,8 +47,10 @@ class DefaultRegistrationComponent (
         componentScope.launch {
             store.labels.collect { label ->
                 when(label){
-                    RegistrationStore.Label.RegistrationComplete -> {
-                        onRegistrationCompleted()
+                    is RegistrationStore.Label.RegistrationComplete -> {
+                        onRegistrationCompleted(
+                            label.registeredUser
+                        )
                     }
                 }
             }
@@ -57,7 +64,7 @@ class DefaultRegistrationComponent (
     override val state = store.stateFlow
 
     override fun onRegisterClick() {
-        store.accept(RegistrationStore.Intent.Register)
+        store.accept(RegistrationStore.Intent.PerformRegister)
     }
 
     override fun onPhoneChanged(newPhone : String) {
@@ -77,19 +84,20 @@ class DefaultRegistrationComponent (
     }
 
     override fun onBackDispatch() {
-        onBackButtonAction()
+        navigateBack()
     }
 
     @Factory
-    class ComponentFactory() : RegistrationComponent.Factory{
+    class ComponentFactory(val sessionRepository: SessionRepository) : RegistrationComponent.Factory{
         override fun invoke(
             componentContext: ComponentContext,
-            onRegistrationCompleted: () -> Unit,
-            onBackClick: () -> Unit
+            onRegistrationCompleted: (user : UserModel) -> Unit,
+            navigateBack: () -> Unit
         ): RegistrationComponent = DefaultRegistrationComponent(
+            sessionRepository = sessionRepository,
             componentContext = componentContext,
             onRegistrationCompleted = onRegistrationCompleted,
-            onBackButtonAction = onBackClick,
+            navigateBack = navigateBack,
         )
 
     }

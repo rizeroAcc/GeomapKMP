@@ -41,7 +41,7 @@ import com.rizero.shared_core_component.ui.PasswordTextField
 import geomapkmp.feature_authorization.generated.resources.AppLogo
 import geomapkmp.feature_authorization.generated.resources.Res
 import org.jetbrains.compose.resources.painterResource
-
+//TODO Вынести в stringResources
 @Composable
 fun AuthorizationScreen(authorizationComponent: AuthorizationComponent){
     val screenState by authorizationComponent.stateFlow.collectAsState()
@@ -54,7 +54,7 @@ fun AuthorizationScreen(authorizationComponent: AuthorizationComponent){
             Image(
                 painter = painterResource(Res.drawable.AppLogo),
                 contentDescription = "Application logo",
-                modifier = Modifier.fillMaxWidth(0.6f)
+                modifier = Modifier.size(200.dp)
             )
             DefaultTextField(
                 inputType = InputType.Phone,
@@ -101,12 +101,7 @@ fun AuthorizationScreen(authorizationComponent: AuthorizationComponent){
                         text = "Зарегистрироваться"
                     )
                 }
-                Text(
-                    modifier = Modifier.padding(top = 8.dp),
-                    text = screenState.errorMessage,
-                    color = Color.Red,
-                    fontSize = 16.sp
-                )
+                ErrorText(screenState.error)
             }
 
             Button(
@@ -140,6 +135,24 @@ fun AuthorizationScreen(authorizationComponent: AuthorizationComponent){
 }
 
 @Composable
+fun ErrorText(error : AuthorizationStore.AuthorizationError?){
+    Text(
+        modifier = Modifier.padding(top = 8.dp),
+        text = error?.let {
+            when(error){
+                AuthorizationStore.AuthorizationError.IncorrectPasswordInput -> ""
+                AuthorizationStore.AuthorizationError.IncorrectPhoneInput -> "Incorrect phone number format"
+                AuthorizationStore.AuthorizationError.InvalidCredentials -> "Incorrect phone or password"
+                AuthorizationStore.AuthorizationError.NetworkUnavailable -> "Network unavailable"
+                AuthorizationStore.AuthorizationError.ServerError -> "Server unavailable. Try later."
+            }
+        } ?: "",
+        color = Color.Red,
+        fontSize = 16.sp
+    )
+}
+
+@Composable
 @Preview(showBackground = true)
 fun AuthorizationScreenPreview(){
     AuthorizationScreen(MockAuthorizationComponent(
@@ -159,7 +172,7 @@ fun AuthorizationScreenWithErrorPreview(){
             state = AuthorizationStore.State(
                 phoneNumber = "89036559989",
                 password = "password",
-                errorMessage = "Some error",
+                error = AuthorizationStore.AuthorizationError.ServerError,
             )
         )
     )

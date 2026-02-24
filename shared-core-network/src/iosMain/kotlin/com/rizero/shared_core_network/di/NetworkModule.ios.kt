@@ -9,3 +9,7 @@ actual fun provideHttpClient(config: HttpClientConfig<*>.() -> Unit): HttpClient
         config()
     }
 }
+
+actual fun provideBaseUrl(): String {
+    TODO("Not yet implemented")
+}

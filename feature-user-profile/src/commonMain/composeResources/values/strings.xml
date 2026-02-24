@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="LogOutQuestion">Вы действительно хотите выйти из аккаунта?</string>
+    <string name="LocalLogOutQuestion">Не удалось отправить запрос. Завершить сессию локально?</string>
+    <string name="Cancel">Отмена</string>
+    <string name="Exit">Выйти</string>
+</resources>

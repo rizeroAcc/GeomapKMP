@@ -15,8 +15,9 @@ import org.koin.core.annotation.Single
 
 class ProjectFlowComponent(
     componentContext: ComponentContext,
+    val logOutCallback : ()-> Unit,
     private val projectSelectionComponentFactory: ProjectSelectComponent.Factory,
-    private val userProfileComponentFactory: UserProfileComponent.Factory
+    private val userProfileComponentFactory: UserProfileComponent.Factory,
 ) : ComponentContext by componentContext {
 
     val navigation = StackNavigation<ScreenConfig>()
@@ -41,7 +42,8 @@ class ProjectFlowComponent(
         ScreenConfig.UserProfile -> Child.UserProfile(
             userProfileComponentFactory(
                 componentContext,
-                backNavigateCallback = ::navigateBack
+                backNavigateCallback = ::navigateBack,
+                onUserLogOut = { logOutCallback() }
             )
         )
     }
@@ -72,10 +74,14 @@ class ProjectFlowComponent(
         private val projectSelectionComponentFactory: ProjectSelectComponent.Factory,
         private val userProfileComponentFactory: UserProfileComponent.Factory,
     ){
-        operator fun invoke(componentContext : ComponentContext) : ProjectFlowComponent = ProjectFlowComponent(
+        operator fun invoke(
+            componentContext : ComponentContext,
+            logOutCallback : ()-> Unit
+        ) : ProjectFlowComponent = ProjectFlowComponent(
             componentContext = componentContext,
             projectSelectionComponentFactory = projectSelectionComponentFactory,
             userProfileComponentFactory = userProfileComponentFactory,
+            logOutCallback = logOutCallback
         )
     }
 }

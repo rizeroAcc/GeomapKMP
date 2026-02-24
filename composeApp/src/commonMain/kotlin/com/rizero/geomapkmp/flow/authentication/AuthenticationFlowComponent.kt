@@ -5,11 +5,12 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
+import com.arkivanov.decompose.router.stack.replaceAll
 import com.rizero.feature_authorization.component.AuthorizationComponent
 import com.rizero.feature_registration.component.RegistrationComponent
+import com.rizero.shared_core_data.model.UserModel
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Factory
-import org.koin.core.annotation.Single
 
 class AuthenticationFlowComponent (
     componentContext: ComponentContext,
@@ -21,7 +22,7 @@ class AuthenticationFlowComponent (
     val stack = childStack(
         source = navigation,
         serializer = ScreenConfig.serializer(),
-        initialConfiguration = ScreenConfig.Authorization,
+        initialConfiguration = ScreenConfig.Authorization(),
         handleBackButton = true,
         childFactory = ::createChild
     )
@@ -33,8 +34,8 @@ class AuthenticationFlowComponent (
         navigation.pop()
     }
 
-    fun onRegistrationComplete(){
-        navigation.pop()
+    fun onRegistrationComplete(user : UserModel){
+        navigation.replaceAll(ScreenConfig.Authorization(user.phone))
     }
     fun _onAuthorizationComplete(){
         onAuthorizationComplete()
@@ -46,15 +47,18 @@ class AuthenticationFlowComponent (
         is ScreenConfig.Authorization -> Child.Authorization(
             authorizationComponentFactory(
                 componentContext = newComponentContext,
-                onAuthorizationComplete = ::_onAuthorizationComplete,
-                onRegistrationClick = ::onRegistrationClick,
+                authorizationCompleteCallback = ::_onAuthorizationComplete,
+                navigateToRegistration = ::onRegistrationClick,
+                userPhone = config.presavedUserPhone
             )
         )
         is ScreenConfig.Registration -> Child.Registration(
             registrationComponentFactory(
                 componentContext = newComponentContext,
-                onRegistrationCompleted = ::onRegistrationComplete,
-                onBackClick = ::onRegistrationBackClick,
+                onRegistrationCompleted = { registeredUser->
+                    onRegistrationComplete(registeredUser)
+                },
+                navigateBack = ::onRegistrationBackClick,
             )
         )
     }
@@ -62,7 +66,9 @@ class AuthenticationFlowComponent (
     @Serializable
     sealed interface ScreenConfig {
         @Serializable
-        data object Authorization : ScreenConfig
+        data class Authorization(
+            val presavedUserPhone : String? = null
+        ) : ScreenConfig
         @Serializable
         data object Registration : ScreenConfig
     }
