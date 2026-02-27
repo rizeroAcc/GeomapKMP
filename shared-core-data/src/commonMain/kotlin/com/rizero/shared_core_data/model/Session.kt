@@ -1,7 +1,9 @@
 package com.rizero.shared_core_data.model
 
 import com.rizero.shared_core_network.model.UserSession
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class Session (
     val user : UserModel,
     val token: Token,
@@ -16,3 +18,8 @@ data class Session (
         )
     }
 }
+
+fun Session.toUserSession() = UserSession(
+    user = this.user.toDto(),
+    tokenData = this.token.value to this.token.expireAt
+)

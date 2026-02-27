@@ -9,12 +9,16 @@ import com.arkivanov.decompose.router.stack.pushNew
 import com.rizero.feature_project_select.component.ProjectSelectComponent
 import com.rizero.feature_user_profile.component.DefaultUserProfileComponent
 import com.rizero.feature_user_profile.component.UserProfileComponent
+import com.rizero.shared_core_data.model.Session
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Single
 
 class ProjectFlowComponent(
     componentContext: ComponentContext,
+
+    val session: Session,
+
     val logOutCallback : ()-> Unit,
     private val projectSelectionComponentFactory: ProjectSelectComponent.Factory,
     private val userProfileComponentFactory: UserProfileComponent.Factory,
@@ -76,9 +80,11 @@ class ProjectFlowComponent(
     ){
         operator fun invoke(
             componentContext : ComponentContext,
+            session: Session,
             logOutCallback : ()-> Unit
         ) : ProjectFlowComponent = ProjectFlowComponent(
             componentContext = componentContext,
+            session = session,
             projectSelectionComponentFactory = projectSelectionComponentFactory,
             userProfileComponentFactory = userProfileComponentFactory,
             logOutCallback = logOutCallback

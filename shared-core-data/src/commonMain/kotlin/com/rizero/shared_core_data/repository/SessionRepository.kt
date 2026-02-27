@@ -9,6 +9,7 @@ import com.rizero.shared_core_data.exceptions.LogInError
 import com.rizero.shared_core_data.exceptions.LogOutError
 import com.rizero.shared_core_data.exceptions.RegistrationError
 import com.rizero.shared_core_data.model.Session
+import com.rizero.shared_core_data.model.Token
 import com.rizero.shared_core_data.model.UserModel
 import com.rizero.shared_core_datasource.remote.AuthRemoteDatasource
 import com.rizero.shared_core_datasource.exception.auth.SignInError
@@ -24,12 +25,18 @@ class SessionRepository(
     private val sessionLocalDatasource: SessionLocalDatasource,
     private val authRemoteDatasource: AuthRemoteDatasource,
 ) {
-    suspend fun logInUser(phone : String, password : String) : Either<UserModel, LogInError> {
+    suspend fun logInUser(phone : String, password : String) : Either<Session, LogInError> {
         val credentials = UserCredentials(RussiaPhoneNumber(phone), Password(password))
         return authRemoteDatasource.signIn(credentials).fold(
             onSuccess = { userSession->
                 sessionLocalDatasource.saveCurrentSession(userSession)
-                Either.success(UserModel.fromUserDTO(userSession.user))
+                Either.success(Session(
+                    user = UserModel.fromUserDTO(userSession.user),
+                    token = Token(
+                        value = userSession.tokenData.first,
+                        expireAt = userSession.tokenData.second
+                    )
+                ))
             },
             onNetworkError = { Either.failure(LogInError.ConnectionError())},
             onFailure = { error ->

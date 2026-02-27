@@ -8,6 +8,7 @@ import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.router.stack.replaceAll
 import com.rizero.feature_authorization.component.AuthorizationComponent
 import com.rizero.feature_registration.component.RegistrationComponent
+import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.model.UserModel
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Factory
@@ -16,7 +17,7 @@ class AuthenticationFlowComponent (
     componentContext: ComponentContext,
     private val authorizationComponentFactory: AuthorizationComponent.Factory,
     private val registrationComponentFactory: RegistrationComponent.Factory,
-    private val onAuthorizationComplete : () ->Unit
+    private val authorizationCompleteCallback : (session : Session) ->Unit
 ) : ComponentContext by componentContext{
     private val navigation = StackNavigation<ScreenConfig>()
     val stack = childStack(
@@ -37,8 +38,8 @@ class AuthenticationFlowComponent (
     fun onRegistrationComplete(user : UserModel){
         navigation.replaceAll(ScreenConfig.Authorization(user.phone))
     }
-    fun _onAuthorizationComplete(){
-        onAuthorizationComplete()
+    fun onAuthorizationComplete(session: Session){
+        authorizationCompleteCallback(session)
     }
     fun createChild(
         config: ScreenConfig,
@@ -47,7 +48,9 @@ class AuthenticationFlowComponent (
         is ScreenConfig.Authorization -> Child.Authorization(
             authorizationComponentFactory(
                 componentContext = newComponentContext,
-                authorizationCompleteCallback = ::_onAuthorizationComplete,
+                authorizationCompleteCallback = { session->
+                    onAuthorizationComplete(session)
+                },
                 navigateToRegistration = ::onRegistrationClick,
                 userPhone = config.presavedUserPhone
             )
@@ -85,12 +88,12 @@ class AuthenticationFlowComponent (
     ){
         operator fun invoke(
             componentContext: ComponentContext,
-            onAuthorizationComplete: () -> Unit
+            onAuthorizationComplete: (session : Session) -> Unit
         ) : AuthenticationFlowComponent = AuthenticationFlowComponent(
             componentContext = componentContext,
             authorizationComponentFactory = authorizationComponentFactory,
             registrationComponentFactory = registrationComponentFactory,
-            onAuthorizationComplete = onAuthorizationComplete
+            authorizationCompleteCallback = onAuthorizationComplete
         )
     }
 }

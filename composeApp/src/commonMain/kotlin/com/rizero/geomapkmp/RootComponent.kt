@@ -6,6 +6,7 @@ import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.replaceAll
 import com.rizero.geomapkmp.flow.authentication.AuthenticationFlowComponent
 import com.rizero.geomapkmp.flow.project.ProjectFlowComponent
+import com.rizero.shared_core_data.model.Session
 import kotlinx.serialization.Serializable
 
 class RootComponent(
@@ -22,10 +23,10 @@ class RootComponent(
         childFactory = ::createChild
     )
 
-    fun startProjectFlow(){
-        navigation.replaceAll(ScreenConfig.Project)
+    fun startProjectFlow(session: Session){
+        navigation.replaceAll(ScreenConfig.Project(session))
     }
-    fun resetUserSession(){
+    fun resetToAuthenticationFlow(){
         navigation.replaceAll(ScreenConfig.Authentication)
     }
     fun createChild(
@@ -39,12 +40,15 @@ class RootComponent(
                     onAuthorizationComplete = ::startProjectFlow
                 )
             )
-            ScreenConfig.Project -> Child.Project(
-                projectFlowComponentFactory(
-                    componentContext,
-                    logOutCallback = ::resetUserSession
+            is ScreenConfig.Project -> {
+                Child.Project(
+                    projectFlowComponentFactory(
+                        componentContext,
+                        session = config.session,
+                        logOutCallback = ::resetToAuthenticationFlow
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -57,7 +61,9 @@ class RootComponent(
     @Serializable
     sealed interface ScreenConfig{
         data object Authentication : ScreenConfig
-        data object Project : ScreenConfig
+        data class Project(
+            val session: Session
+        ) : ScreenConfig
     }
 
 }

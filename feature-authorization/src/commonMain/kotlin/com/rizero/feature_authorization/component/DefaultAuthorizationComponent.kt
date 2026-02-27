@@ -9,6 +9,7 @@ import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.rizero.feature_authorization.AuthorizationStore
 import com.rizero.feature_authorization.AuthorizationStoreFactory
+import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.SessionRepository
 import com.rizero.shared_core_data.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,7 @@ class DefaultAuthorizationComponent(
     private val userRepository: UserRepository,
     private val storeFactory: StoreFactory = DefaultStoreFactory(),
     private val navigateToRegistration : ()-> Unit,
-    private val authorizationCompleteCallback : () -> Unit,
+    private val authorizationCompleteCallback : (session : Session) -> Unit,
     val userPhone: String? = null,
 ) : AuthorizationComponent,ComponentContext by componentContext {
     val scope = coroutineScope(Dispatchers.Main)
@@ -39,7 +40,7 @@ class DefaultAuthorizationComponent(
             labels.collect { label->
                 when (label) {
                     is AuthorizationStore.Label.SuccessfulLogIn -> {
-                        authorizationCompleteCallback()
+                        authorizationCompleteCallback(label.session)
                     }
                 }
             }
@@ -75,7 +76,7 @@ class DefaultAuthorizationComponent(
     ) : AuthorizationComponent.Factory {
         override fun invoke(
             componentContext: ComponentContext,
-            authorizationCompleteCallback: () -> Unit,
+            authorizationCompleteCallback: (session : Session) -> Unit,
             navigateToRegistration: () -> Unit,
             userPhone : String?,
         ): AuthorizationComponent = DefaultAuthorizationComponent(

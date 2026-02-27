@@ -9,9 +9,11 @@ import androidx.room.PrimaryKey
 )
 data class ProjectEntity(
     @PrimaryKey
-    @ColumnInfo(index = true)
+    @ColumnInfo(name = "project_id",index = true)
     val projectID : String,
+    @ColumnInfo(name = "server_project_id")
+    val serverProjectID : String? = null,
     val name : String,
-    val createdOnServer : Boolean
+    val membersCount : Int
 ) {
 }

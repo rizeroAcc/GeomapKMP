@@ -9,6 +9,7 @@ import com.rizero.feature_authorization.AuthorizationStore.Label
 import com.rizero.feature_authorization.AuthorizationStoreFactory.Action.*
 import com.rizero.feature_authorization.AuthorizationStoreFactory.Message.*
 import com.rizero.shared_core_data.exceptions.LogInError
+import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.SessionRepository
 import com.rizero.shared_core_data.repository.UserRepository
 import com.rizero.shared_core_utils.fold
@@ -22,7 +23,7 @@ import kotlin.time.ExperimentalTime
 
 interface AuthorizationStore : Store<AuthorizationStore.Intent, AuthorizationStore.State, Label> {
     sealed class Label{
-        data object SuccessfulLogIn : Label()
+        data class SuccessfulLogIn(val session : Session) : Label()
     }
 
     sealed class Intent{
@@ -75,7 +76,7 @@ class AuthorizationStoreFactory(
     }
     private sealed class Action{
         data object ValidateInput : Action()
-        data object SkipAuthentication : Action()
+        data class SkipAuthentication(val session: Session) : Action()
         data class AuthorizeUser(
             val phone : String,
             val password : String,
@@ -87,17 +88,17 @@ class AuthorizationStoreFactory(
         @OptIn(ExperimentalTime::class)
         override fun invoke() {
             scope.launch {
-                val authenticationData = sessionRepository.getCurrentSession()
-                if (authenticationData != null){
-                    val token = authenticationData.token
+                val savedSession = sessionRepository.getCurrentSession()
+                if (savedSession != null){
+                    val token = savedSession.token
                     val nowTime = Clock.System.now().toEpochMilliseconds()
                     val day = 24.hours.inWholeMilliseconds
                     if (nowTime + day < token.expireAt){
                         //token expiration more than 1 day, no need to refresh token
-                        dispatch(SkipAuthentication)
+                        dispatch(SkipAuthentication(savedSession))
                     }else{
                         //token expiration less than 1 day, need to refresh token
-                        //todo refresh token
+                        //todo refresh token (сделать когда будет endpoint на сервере)
                     }
                 }
             }
@@ -140,11 +141,11 @@ class AuthorizationStoreFactory(
                         val user = sessionRepository.logInUser(nowState.phoneNumber, nowState.password)
                         withContext(Dispatchers.Main.immediate){
                             user.fold(
-                                onSuccess = { result->
+                                onSuccess = { session->
                                     scope.launch(Dispatchers.IO) {
-                                        userRepository.saveUser(result)
+                                        userRepository.saveUser(session.user)
                                     }
-                                    publish(Label.SuccessfulLogIn)
+                                    publish(Label.SuccessfulLogIn(session))
                                     dispatch(AuthorizationCompleted)
                                 },
                                 onError = { error->
@@ -162,8 +163,8 @@ class AuthorizationStoreFactory(
                         }
                     }
                 }
-                SkipAuthentication -> {
-                    publish(Label.SuccessfulLogIn)
+                is SkipAuthentication -> {
+                    publish(Label.SuccessfulLogIn(action.session))
                     dispatch(AuthorizationCompleted)
                 }
             }

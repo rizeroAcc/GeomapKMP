@@ -2,6 +2,9 @@ package com.rizero.feature_authorization.component
 
 import com.arkivanov.decompose.ComponentContext
 import com.rizero.feature_authorization.AuthorizationStore
+import com.rizero.shared_core_data.model.Session
+import com.rizero.shared_core_data.model.Token
+import com.rizero.shared_core_data.model.UserModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +20,7 @@ interface AuthorizationComponent {
     fun interface Factory {
         operator fun invoke( // 2
             componentContext: ComponentContext,
-            authorizationCompleteCallback: () -> Unit,
+            authorizationCompleteCallback: (session : Session) -> Unit,
             navigateToRegistration: () -> Unit,
             userPhone : String?,
         ): AuthorizationComponent
@@ -31,7 +34,7 @@ class MockAuthorizationComponent(val state : AuthorizationStore.State): Authoriz
     )
     override val labels: StateFlow<AuthorizationStore.Label>
         get() = MutableStateFlow(
-            AuthorizationStore.Label.SuccessfulLogIn
+            AuthorizationStore.Label.SuccessfulLogIn(Session(UserModel("","",""), Token("",0)))
         )
     override fun onLoginChanged(newLogin: String) {}
     override fun onPasswordChanged(newPassword: String) {}
