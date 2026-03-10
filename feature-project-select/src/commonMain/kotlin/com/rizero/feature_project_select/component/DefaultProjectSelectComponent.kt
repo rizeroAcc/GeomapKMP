@@ -8,26 +8,46 @@ import com.arkivanov.decompose.router.slot.activate
 import com.arkivanov.decompose.router.slot.childSlot
 import com.arkivanov.decompose.router.slot.dismiss
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.arkivanov.mvikotlin.core.instancekeeper.getStore
 import com.arkivanov.mvikotlin.core.store.StoreFactory
+import com.arkivanov.mvikotlin.extensions.coroutines.labels
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
-import com.rizero.feature_project_select.store.ProjectSelectionStore
+import com.rizero.feature_project_select.store.ProjectListStore
 import com.rizero.feature_project_select.store.ProjectSelectionStoreFactory
 import com.rizero.shared_core_component.decompose.DefaultIconButtonTopBarComponent
+import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.ProjectRepository
 import com.rizero.shared_core_data.repository.SessionRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Factory
 
 class DefaultProjectSelectComponent(
     componentContext : ComponentContext,
+    private val session: Session,
     private val storeFactory: StoreFactory = DefaultStoreFactory(),
-    private val sessionRepository: SessionRepository,
     private val projectRepository: ProjectRepository,
     private val addProjectDialogComponentFactory: AddProjectDialogComponent.Factory,
-    private val onProfileIconClick : ()-> Unit
+    private val onProfileIconClick : ()-> Unit,
+    private val onSessionExpired: (Session) -> Unit
 ) : ProjectSelectComponent, ComponentContext by componentContext {
+
+    val scope = coroutineScope()
+
+    init {
+        scope.launch(Dispatchers.Default) {
+            store.labels.collect { label ->
+                when(label) {
+                    ProjectListStore.Label.SessionExpired -> {
+                        onSessionExpired(session)
+                    }
+                }
+            }
+        }
+    }
 
     override val topBarComponent = DefaultIconButtonTopBarComponent(
         componentContext = childContext("ProjectScreenTopBar"),
@@ -44,21 +64,26 @@ class DefaultProjectSelectComponent(
         handleBackButton = true,
     ){ _, childComponentContext->
         addProjectDialogComponentFactory(
-            componentContext = childComponentContext
+            componentContext = childComponentContext,
+            session = session,
+            projectCreatedCallback = { project, error->
+                store.accept(ProjectListStore.Intent.ReloadFromCache)
+                //todo display error
+            }
         )
     }
-    val store : ProjectSelectionStore = instanceKeeper.getStore {
+    val store : ProjectListStore = instanceKeeper.getStore {
         ProjectSelectionStoreFactory(
             storeFactory = storeFactory,
             projectRepository = projectRepository,
-            sessionRepository = sessionRepository
+            currentSession = session,
         ).create()
     }
 
     override val stateFlow = store.stateFlow(lifecycle)
 
     override fun refreshProjectList(){
-        store.accept(ProjectSelectionStore.Intent.ReloadProjectList)
+        store.accept(ProjectListStore.Intent.ReloadProjectList)
     }
 
     override fun openAddProjectDialog() {
@@ -82,14 +107,17 @@ class DefaultProjectSelectComponent(
         val addProjectDialogComponentFactory: AddProjectDialogComponent.Factory,
     ) : ProjectSelectComponent.Factory{
         override fun invoke(
+            session: Session,
             componentContext: ComponentContext,
             onProfileIconClick: () -> Unit,
+            onSessionExpired: (Session) -> Unit,
         ) = DefaultProjectSelectComponent(
+            session = session,
             componentContext = componentContext,
-            sessionRepository = sessionRepository,
             projectRepository = projectRepository,
             addProjectDialogComponentFactory = addProjectDialogComponentFactory,
-            onProfileIconClick = onProfileIconClick
+            onProfileIconClick = onProfileIconClick,
+            onSessionExpired = onSessionExpired
         )
     }
 }

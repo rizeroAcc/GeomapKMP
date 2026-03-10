@@ -15,7 +15,7 @@ actual fun provideHttpClient(config : HttpClientConfig<*>.() -> Unit): HttpClien
     ){
         config()
         engine {
-            addInterceptor(loggingInterceptor)
+            //addInterceptor(loggingInterceptor)
         }
     }
 }

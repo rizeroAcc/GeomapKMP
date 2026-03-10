@@ -136,7 +136,7 @@ fun CreateProjectDialog(
                 containerColor = AppTheme.Colors.DefaultButtonColor
             ),
             onClick = {
-
+                addProjectDialogComponent.createProject()
             },
             modifier = Modifier
                 .padding(top = 18.dp)

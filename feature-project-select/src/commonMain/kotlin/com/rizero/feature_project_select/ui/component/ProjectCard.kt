@@ -52,11 +52,9 @@ fun ProjectCard(project: Project){
                 ) {
                     ColoredCircle(
                         size = 16.dp,
-                        color = when(project.syncStatus){
-                            1 -> Color.Red
-                            2 -> Color.Yellow
-                            3 -> Color.Green
-                            else -> Color.Unspecified
+                        color = when(project.serverID){
+                            null -> Color.Red
+                            else -> Color.Green
                         }
                     )
                 }
@@ -100,7 +98,7 @@ fun ProjectCardPreview(){
     ProjectCard(
         Project(
             name = "Проект 1",
-            syncStatus = 1,
+            serverID = null,
             membersCount = 4,
             id = "yafd543",
             role = 2

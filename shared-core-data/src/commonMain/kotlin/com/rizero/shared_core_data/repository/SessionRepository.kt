@@ -3,14 +3,16 @@ package com.rizero.shared_core_data.repository
 import com.mapprjct.model.datatype.Password
 import com.mapprjct.model.datatype.RussiaPhoneNumber
 import com.mapprjct.model.datatype.Username
-import com.mapprjct.model.dto.User
 import com.mapprjct.model.dto.UserCredentials
 import com.rizero.shared_core_data.exceptions.LogInError
 import com.rizero.shared_core_data.exceptions.LogOutError
+import com.rizero.shared_core_data.exceptions.RefreshSessionError
 import com.rizero.shared_core_data.exceptions.RegistrationError
+import com.rizero.shared_core_data.exceptions.ValidateTokenError
 import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.model.Token
 import com.rizero.shared_core_data.model.UserModel
+import com.rizero.shared_core_datasource.exception.auth.RefreshTokenError
 import com.rizero.shared_core_datasource.remote.AuthRemoteDatasource
 import com.rizero.shared_core_datasource.exception.auth.SignInError
 import com.rizero.shared_core_datasource.exception.auth.SignOutError
@@ -48,7 +50,6 @@ class SessionRepository(
             }
         )
     }
-
     suspend fun registerUser(phone: String, password: String, username: String) : Either<UserModel, RegistrationError>{
         val userCredentials = UserCredentials(phone = RussiaPhoneNumber(phone), password = Password(password))
         return authRemoteDatasource.signUp(
@@ -71,7 +72,7 @@ class SessionRepository(
         )
     }
     suspend fun logOutUser() : Either<Unit, LogOutError>{
-        val currentSession = getCurrentSession() ?: return Either.success(Unit)
+        val currentSession = getCachedSession() ?: return Either.success(Unit)
         return authRemoteDatasource.logOut(currentSession.token.value).fold(
             onSuccess = {
                 sessionLocalDatasource.clearCurrentSession()
@@ -90,16 +91,46 @@ class SessionRepository(
         )
     }
 
+    suspend fun checkSessionValid(session: Session) : Either<Boolean, ValidateTokenError> {
+        return authRemoteDatasource.checkTokenValid(session.token.value).fold(
+            onSuccess = { validationResult->
+                Either.success(validationResult)
+            },
+            onNetworkError = {
+                Either.failure(ValidateTokenError.ConnectionError())
+            },
+            onFailure = { error("Never can be there") }
+        )
+    }
+    suspend fun refreshSession(session: Session) : Either<Session, RefreshSessionError>{
+        return authRemoteDatasource.refreshSession(session.token.value).fold(
+            onSuccess = { refreshedTokenData->
+                Either.success(session.copy(token = Token(
+                        value = refreshedTokenData.first,
+                        expireAt = refreshedTokenData.second
+                    ))
+                )
+            },
+            onNetworkError = {
+                Either.failure(RefreshSessionError.NetworkUnavailable)
+            },
+            onFailure = { error ->
+                when(error){
+                    is RefreshTokenError.ServerError -> Either.failure(RefreshSessionError.ServerError)
+                    is RefreshTokenError.Unauthorized -> Either.failure(RefreshSessionError.TokenExpired)
+                }
+            }
+        )
+    }
     suspend fun clearActiveSession() {
         sessionLocalDatasource.clearCurrentSession()
     }
 
-    suspend fun refreshSession(){TODO("Пока не написано на сервере")}
-
-    suspend fun getCurrentSession() : Session?{
+    suspend fun getCachedSession() : Session?{
         return sessionLocalDatasource.getCurrentSession()?.let {
             Session.fromUserSession(it)
         }
     }
 
 }
+

@@ -119,11 +119,11 @@ fun AuthorizationScreen(authorizationComponent: AuthorizationComponent){
                     defaultElevation = 4.dp,
                     pressedElevation = 0.dp,
                 ),
-                enabled = !screenState.isLoading
+                enabled = !screenState.authorizationInProcess
             ){
                 Row(verticalAlignment = Alignment.CenterVertically){
                     Text("Войти")
-                    if (screenState.isLoading){
+                    if (screenState.authorizationInProcess){
                         HorizontalDivider(modifier = Modifier.width(12.dp))
                         CircularProgressIndicator(modifier = Modifier.size(40.dp))
                     }

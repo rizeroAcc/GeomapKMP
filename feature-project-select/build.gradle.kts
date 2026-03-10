@@ -65,6 +65,9 @@ kotlin {
                 implementation(libs.bundles.compose.multiplatform)
                 implementation(libs.compose.uiToolingPreview)
 
+                implementation(libs.pullToRefresh)
+
+
                 implementation(projects.sharedCoreData)
                 implementation(projects.sharedCoreComponent)
             }

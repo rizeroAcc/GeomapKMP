@@ -44,6 +44,7 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.bundles.ktor.multiplatform)
                 implementation(libs.bundles.koin.annotations)
+                implementation(libs.kermit.logger)
             }
         }
 

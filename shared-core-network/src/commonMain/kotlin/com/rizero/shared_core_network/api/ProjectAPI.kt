@@ -43,7 +43,7 @@ class DefaultProjectAPI(val client: HttpClient) : ProjectAPI {
         val request = RegisterProjectListRequest(
             projects = projects
         )
-        return client.post {
+        return client.post("/projects/registerAll") {
             headers.append("Authorization",session.tokenData.first)
             setBody(request)
         }

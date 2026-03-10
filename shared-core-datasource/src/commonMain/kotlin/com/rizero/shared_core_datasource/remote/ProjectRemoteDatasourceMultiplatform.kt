@@ -1,5 +1,6 @@
 package com.rizero.shared_core_datasource.remote
 
+import com.mapprjct.model.datatype.StringUUID
 import com.mapprjct.model.dto.Project
 import com.mapprjct.model.dto.ProjectMembership
 import com.mapprjct.model.dto.ProjectRegistrationResult
@@ -17,16 +18,19 @@ import com.rizero.shared_core_utils.NetworkResult
 import com.rizero.shared_core_utils.bodySafely
 import com.rizero.shared_core_utils.defaultNetworkCall
 import io.ktor.http.HttpStatusCode
+import org.koin.core.annotation.Single
 
+@Single
 class ProjectRemoteDatasourceMultiplatform(
     val projectAPI: ProjectAPI
 ) : ProjectRemoteDatasource {
-    override suspend fun registerNewProject(projectName : String, userSession: UserSession) : NetworkResult<ProjectRegistrationResult, RegisterProjectError> {
+    override suspend fun registerNewProject(projectName : String, userSession: UserSession, localProjectID : String?) : NetworkResult<ProjectRegistrationResult, RegisterProjectError> {
         return defaultNetworkCall< RegisterProjectResponse, ProjectRegistrationResult , RegisterProjectError>(
             call = {
                 projectAPI.createProject(
                     projectName = projectName,
-                    session = userSession
+                    session = userSession,
+                    localID = localProjectID?.let { StringUUID(localProjectID) },
                 )
             },
             onRequestSuccess = { createProjectResponse,_ ->
@@ -46,30 +50,6 @@ class ProjectRemoteDatasourceMultiplatform(
             }
         )
     }
-    override suspend fun getAllUserProjects(userSession: UserSession) : NetworkResult<List<ProjectMembership>, GetAllUserProjectsError>{
-        return defaultNetworkCall<GetAllUserProjectsResponse,List<ProjectMembership>, GetAllUserProjectsError>(
-            call = {
-                projectAPI.getAllUserProjects(userSession)
-            },
-            onRequestSuccess = { getAllProjectsResponse,_->
-                getAllProjectsResponse.result
-            },
-            onRequestFailure = { code,response ->
-                when(code){
-                    HttpStatusCode.InternalServerError -> {
-                        val errorResponse = response.bodySafely<ErrorResponse>()
-                        GetAllUserProjectsError.InternalServerError(
-                            errorResponse?.message
-                        )
-                    }
-                    HttpStatusCode.Unauthorized ->
-                        GetAllUserProjectsError.Unauthorized()
-                    else -> GetAllUserProjectsError.UnexpectedServerResponse()
-                }
-            }
-        )
-    }
-
     override suspend fun registerNewProjectList(projects: List<Project>, session: UserSession): NetworkResult<List<ProjectRegistrationResult>, RegisterProjectListError> {
         return defaultNetworkCall<RegisterProjectListResponse,List<ProjectRegistrationResult>, RegisterProjectListError>(
             call = {
@@ -89,6 +69,30 @@ class ProjectRemoteDatasourceMultiplatform(
                     }
                     HttpStatusCode.Unauthorized-> RegisterProjectListError.Unauthorized()
                     else -> RegisterProjectListError.UnexpectedServerResponse()
+                }
+            }
+        )
+    }
+
+    override suspend fun getAllUserProjects(userSession: UserSession) : NetworkResult<List<ProjectMembership>, GetAllUserProjectsError>{
+        return defaultNetworkCall<GetAllUserProjectsResponse,List<ProjectMembership>, GetAllUserProjectsError>(
+            call = {
+                projectAPI.getAllUserProjects(userSession)
+            },
+            onRequestSuccess = { getAllProjectsResponse,_->
+                getAllProjectsResponse.result
+            },
+            onRequestFailure = { code,response ->
+                when(code){
+                    HttpStatusCode.InternalServerError -> {
+                        val errorResponse = response.bodySafely<ErrorResponse>()
+                        GetAllUserProjectsError.InternalServerError(
+                            errorResponse?.message
+                        )
+                    }
+                    HttpStatusCode.Unauthorized ->
+                        GetAllUserProjectsError.Unauthorized()
+                    else -> GetAllUserProjectsError.UnexpectedServerResponse()
                 }
             }
         )

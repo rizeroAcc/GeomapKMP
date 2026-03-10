@@ -16,10 +16,9 @@ import org.koin.core.annotation.Single
 
 class ProjectFlowComponent(
     componentContext: ComponentContext,
-
     val session: Session,
-
     val logOutCallback : ()-> Unit,
+    val onSessionExpiredCallback : (Session)-> Unit,
     private val projectSelectionComponentFactory: ProjectSelectComponent.Factory,
     private val userProfileComponentFactory: UserProfileComponent.Factory,
 ) : ComponentContext by componentContext {
@@ -39,8 +38,12 @@ class ProjectFlowComponent(
     ) = when(screenConfig) {
         ScreenConfig.ProjectSelection -> Child.ProjectSelectionPage(
             projectSelectionComponentFactory(
+                session = session,
                 componentContext,
-                onProfileIconClick = ::openUserProfile
+                onProfileIconClick = ::openUserProfile,
+                onSessionExpired = { session->
+                    onSessionExpiredCallback(session)
+                }
             )
         )
         ScreenConfig.UserProfile -> Child.UserProfile(
@@ -51,6 +54,8 @@ class ProjectFlowComponent(
             )
         )
     }
+
+
 
     fun openUserProfile(){
         navigation.pushNew(ScreenConfig.UserProfile)
@@ -81,13 +86,15 @@ class ProjectFlowComponent(
         operator fun invoke(
             componentContext : ComponentContext,
             session: Session,
-            logOutCallback : ()-> Unit
+            logOutCallback : ()-> Unit,
+            onSessionExpiredCallback: (Session) -> Unit,
         ) : ProjectFlowComponent = ProjectFlowComponent(
             componentContext = componentContext,
             session = session,
             projectSelectionComponentFactory = projectSelectionComponentFactory,
             userProfileComponentFactory = userProfileComponentFactory,
-            logOutCallback = logOutCallback
+            logOutCallback = logOutCallback,
+            onSessionExpiredCallback = onSessionExpiredCallback,
         )
     }
 }

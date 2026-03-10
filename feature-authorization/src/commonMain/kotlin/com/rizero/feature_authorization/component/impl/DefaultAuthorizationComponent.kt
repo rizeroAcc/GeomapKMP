@@ -1,4 +1,4 @@
-package com.rizero.feature_authorization.component
+package com.rizero.feature_authorization.component.impl
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
@@ -9,6 +9,7 @@ import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.rizero.feature_authorization.AuthorizationStore
 import com.rizero.feature_authorization.AuthorizationStoreFactory
+import com.rizero.feature_authorization.component.AuthorizationComponent
 import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.SessionRepository
 import com.rizero.shared_core_data.repository.UserRepository
@@ -25,7 +26,7 @@ class DefaultAuthorizationComponent(
     private val navigateToRegistration : ()-> Unit,
     private val authorizationCompleteCallback : (session : Session) -> Unit,
     val userPhone: String? = null,
-) : AuthorizationComponent,ComponentContext by componentContext {
+) : AuthorizationComponent, ComponentContext by componentContext {
     val scope = coroutineScope(Dispatchers.Main)
     private val store : AuthorizationStore = instanceKeeper.getStore {
         AuthorizationStoreFactory(

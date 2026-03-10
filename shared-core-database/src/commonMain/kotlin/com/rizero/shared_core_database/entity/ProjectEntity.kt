@@ -14,6 +14,7 @@ data class ProjectEntity(
     @ColumnInfo(name = "server_project_id")
     val serverProjectID : String? = null,
     val name : String,
+    @ColumnInfo(name = "members_count")
     val membersCount : Int
 ) {
 }

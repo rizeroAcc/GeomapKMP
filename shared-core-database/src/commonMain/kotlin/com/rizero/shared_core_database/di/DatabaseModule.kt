@@ -3,6 +3,7 @@ package com.rizero.shared_core_database.di
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.rizero.shared_core_database.AppDatabase
+import com.rizero.shared_core_database.dao.MembershipDAO
 import com.rizero.shared_core_database.dao.ProjectDAO
 import com.rizero.shared_core_database.dao.UserDAO
 import kotlinx.coroutines.Dispatchers
@@ -26,13 +27,12 @@ class DatabaseModule {
             .build()
     }
     @Single
-    fun provideUserDAO(database: AppDatabase) : UserDAO {
-        return database.userDao()
-    }
+    fun provideUserDAO(database: AppDatabase) : UserDAO = database.userDao()
     @Single
-    fun provideProjectDAO(database: AppDatabase) : ProjectDAO {
-        return database.projectDao()
-    }
+    fun provideProjectDAO(database: AppDatabase) : ProjectDAO = database.projectDao()
+    @Single
+    fun provideMembershipDAO(database: AppDatabase) : MembershipDAO = database.membershipDao()
+
 }
 
 expect fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase>

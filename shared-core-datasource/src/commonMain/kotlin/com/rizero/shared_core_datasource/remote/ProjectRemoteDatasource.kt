@@ -10,7 +10,7 @@ import com.rizero.shared_core_network.model.UserSession
 import com.rizero.shared_core_utils.NetworkResult
 
 interface ProjectRemoteDatasource {
-    suspend fun registerNewProject(projectName : String, userSession: UserSession) : NetworkResult<ProjectRegistrationResult, RegisterProjectError>
+    suspend fun registerNewProject(projectName : String, userSession: UserSession, localProjectID : String? = null) : NetworkResult<ProjectRegistrationResult, RegisterProjectError>
     suspend fun getAllUserProjects(userSession: UserSession) : NetworkResult<List<ProjectMembership>, GetAllUserProjectsError>
 
     suspend fun registerNewProjectList(projects: List<Project>, session: UserSession) : NetworkResult<List<ProjectRegistrationResult>, RegisterProjectListError>

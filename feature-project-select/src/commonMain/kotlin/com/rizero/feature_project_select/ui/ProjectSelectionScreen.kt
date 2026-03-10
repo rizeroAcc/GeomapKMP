@@ -3,6 +3,7 @@ package com.rizero.feature_project_select.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -12,19 +13,21 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.rizero.feature_project_select.store.AddProjectDialogStore
-import com.rizero.feature_project_select.store.ProjectSelectionStore
+import com.rizero.feature_project_select.store.ProjectListStore
 import com.rizero.feature_project_select.component.MockAddProjectDialogComponent
 import com.rizero.feature_project_select.component.MockProjectSelectComponent
 import com.rizero.feature_project_select.component.ProjectSelectComponent
@@ -35,6 +38,8 @@ import com.rizero.shared_core_component.theme.AppTheme
 import com.rizero.shared_core_data.model.Project
 import geomapkmp.feature_project_select.generated.resources.Res
 import geomapkmp.feature_project_select.generated.resources.add
+import io.github.lmbotero.pulltorefresh.ui.PullToRefreshLayout
+import io.github.lmbotero.pulltorefresh.util.RefreshStateEvent
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -64,21 +69,41 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
             }
         }
     ) { innerPadding->
-        PullToRefreshBox(
-            modifier = Modifier.padding(innerPadding),
-            onRefresh = projectSelectionComponent::refreshProjectList,
-            isRefreshing = state.isProjectListLoading
+
+        PullToRefreshLayout(
+            refreshStateEvent = RefreshStateEvent(
+                isRefreshing = state.isProjectListLoading,
+                onRefresh = projectSelectionComponent::refreshProjectList
+            ),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color = AppTheme.Colors.DefaultPageBackgroundColor),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 8.dp, start = 20.dp, end = 20.dp)
-            ) {
-                items(state.projectList.size){ itemIndex->
-                    ProjectCard(state.projectList[itemIndex])
+            if (state.projectList.isEmpty()) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    Text(
+                        text = "Список проектов пуст",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }else{
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(color = AppTheme.Colors.DefaultPageBackgroundColor),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(top = 8.dp, start = 20.dp, end = 20.dp)
+                ) {
+                    items(state.projectList.size) {itemIndex ->
+                        ProjectCard(state.projectList[itemIndex])
+                    }
                 }
             }
         }
@@ -94,31 +119,41 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
 
 @Composable
 @Preview(showBackground = true)
+fun ProjectSelectionScreenWithEmptyListPreview(){
+    ProjectSelectionScreen(
+        MockProjectSelectComponent(
+            state = ProjectListStore.State(),
+            topBarComponent = MockIconButtonTopBarComponent("Проекты")
+        )
+    )
+}
+
+@Composable
+@Preview(showBackground = true)
 fun ProjectSelectionScreenPreview(){
     ProjectSelectionScreen(
         MockProjectSelectComponent(
-            state = ProjectSelectionStore.State(
-                listPlaceholderText = "Loading",
+            state = ProjectListStore.State(
                 projectList = listOf(
                     Project(
                         name = "project 1",
                         id = "1",
                         membersCount = 2,
-                        syncStatus = 2,
+                        serverID = "gdfsa",
                         role = 2
                     ),
                     Project(
                         name = "project 2",
                         id = "2",
                         membersCount = 1,
-                        syncStatus = 3,
+                        serverID = null,
                         role = 1
                     ),
                     Project(
                         name = "project 3",
                         id = "3",
                         membersCount = 5,
-                        syncStatus = 1,
+                        serverID = null,
                         role = 3
                     )
                 )
@@ -135,28 +170,27 @@ fun ProjectSelectionScreenPreview(){
 @Preview(showBackground = true)
 fun ProjectSelectionScreenWithDialogPreview(){
     ProjectSelectionScreen(MockProjectSelectComponent(
-        state = ProjectSelectionStore.State(
-            listPlaceholderText = "Loading",
+        state = ProjectListStore.State(
             projectList = listOf(
                 Project(
                     name = "project 1",
                     id = "1",
                     membersCount = 2,
-                    syncStatus = 2,
+                    serverID = "gdfsa",
                     role = 2
                 ),
                 Project(
                     name = "project 2",
                     id = "2",
                     membersCount = 1,
-                    syncStatus = 3,
+                    serverID = null,
                     role = 1
                 ),
                 Project(
                     name = "project 3",
                     id = "3",
                     membersCount = 5,
-                    syncStatus = 1,
+                    serverID = null,
                     role = 3
                 )
             )

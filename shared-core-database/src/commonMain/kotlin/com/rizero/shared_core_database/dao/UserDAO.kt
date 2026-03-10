@@ -19,12 +19,4 @@ interface UserDAO {
         SELECT * FROM users WHERE phone = :phone
     """)
     suspend fun getUser(phone : String) : UserEntity?
-
-    @Transaction
-    @Query("""
-        SELECT * FROM project_user_membership 
-        INNER JOIN projects ON projects.project_id = project_user_membership.project_id
-        WHERE user_phone = :phone
-    """)
-    suspend fun getAllUserMemberships(phone: String) : List<UserMembershipInProject>
 }

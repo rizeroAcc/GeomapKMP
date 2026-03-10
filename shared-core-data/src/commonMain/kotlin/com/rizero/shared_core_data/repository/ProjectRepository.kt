@@ -2,19 +2,20 @@ package com.rizero.shared_core_data.repository
 
 import com.mapprjct.model.datatype.Role
 import com.mapprjct.model.datatype.StringUUID
-import com.rizero.shared_core_data.exceptions.ServerLoadFailure
-import com.rizero.shared_core_data.exceptions.ServerLoadFailure.*
+import com.rizero.shared_core_data.exceptions.ProjectRegistrationError
+import com.rizero.shared_core_data.exceptions.LoadUserProjectsError
+import com.rizero.shared_core_data.exceptions.LoadUserProjectsError.*
 import com.rizero.shared_core_data.model.Project
 import com.rizero.shared_core_data.model.Session
+import com.rizero.shared_core_data.model.toEntity
 import com.rizero.shared_core_data.model.toUserSession
-import com.rizero.shared_core_database.entity.ProjectEntity
 import com.rizero.shared_core_datasource.exception.project.GetAllUserProjectsError
+import com.rizero.shared_core_datasource.exception.project.RegisterProjectError
+import com.rizero.shared_core_datasource.exception.project.RegisterProjectListError
 import com.rizero.shared_core_datasource.local.ProjectLocalDatasource
 import com.rizero.shared_core_datasource.remote.ProjectRemoteDatasource
 import com.rizero.shared_core_utils.Either
 import com.rizero.shared_core_utils.fold
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import org.koin.core.annotation.Single
 
 @Single
@@ -35,7 +36,7 @@ class ProjectRepository(
                 )
             }
     }
-    suspend fun loadProjectsFromNetwork(session: Session) : Either<List<Project>, ServerLoadFailure> {
+    suspend fun loadProjectsFromNetwork(session: Session) : Either<List<Project>, LoadUserProjectsError> {
         return projectRemoteDatasource.getAllUserProjects(session.toUserSession()).fold(
             onSuccess = { projectMemberships ->
                 Either.success(projectMemberships.map { Project(
@@ -59,7 +60,7 @@ class ProjectRepository(
         )
     }
 
-    suspend fun registerProjects(projects : List<Project>,session: Session) : Either<List<Project>, ServerLoadFailure>{
+    suspend fun registerProjects(projects : List<Project>,session: Session) : Either<List<Project>, ProjectRegistrationError>{
         val projectsDto = projects.map { com.mapprjct.model.dto.Project(StringUUID(it.id),it.name,it.membersCount) }
         return projectRemoteDatasource.registerNewProjectList(projectsDto, session = session.toUserSession()).fold(
             onSuccess = { registeredProjects->
@@ -74,79 +75,63 @@ class ProjectRepository(
                 })
             },
             onNetworkError = {
-                Either.failure(TODO())
+                Either.failure(ProjectRegistrationError.ConnectionError())
             },
-            onFailure = {
-                Either.failure(TODO())
-            }
-        )
-    }
-
-    suspend fun syncProjects(cachedProjects : List<Project>, serverProjects : List<Project>, session: Session) : Flow<ProjectSyncState> = flow {
-        //todo проверить, может разбить на методы
-        emit(ProjectSyncState.SyncStarted())
-
-        //save received projects
-        val registeredProjectsID = cachedProjects.filter { it.serverID != null }.map { it.serverID }
-        val newProjects = serverProjects.filter { it.serverID !in registeredProjectsID}
-        //cache
-        projectLocalDatasource.saveRegisteredProjectList(newProjects
-            .map {
-                ProjectEntity(
-                    projectID = it.id,
-                    serverProjectID = it.serverID,
-                    name = it.name,
-                    membersCount = it.membersCount
-                )
-            }
-        )
-        val newCachedList = ArrayList(cachedProjects)
-        newCachedList.addAll(newProjects)
-        emit(ProjectSyncState.ReceivedSaved(newCachedList))
-
-        //register projects
-        val userSession = session.toUserSession()
-
-
-        val syncedProjects = ArrayList<Project>()
-        var registeredCount = 0
-
-        val notRegisteredProjects = cachedProjects.filter { it.serverID == null }
-
-        emit(ProjectSyncState.InProcess(registeredCount,notRegisteredProjects.size))
-        for (projectToRegister in notRegisteredProjects){
-            projectRemoteDatasource.registerNewProject(projectToRegister.name,userSession).fold(
-                onSuccess = { registrationResult->
-                    projectLocalDatasource.updateServerIDAfterProjectRegistration(projectToRegister.id, serverProjectID = registrationResult.project.projectID.value)
-                    registeredCount += 1
-                    syncedProjects.add(Project(
-                        name = registrationResult.project.name,
-                        id = registrationResult.project.projectID.value,
-                        serverID = registrationResult.project.projectID.value,
-                        membersCount = registrationResult.project.membersCount,
-                        role = Role.Owner.toShort().toInt()
-                    ))
-                    emit(ProjectSyncState.InProcess(registeredCount,notRegisteredProjects.size))
-                },
-                onNetworkError = { error ->
-                    emit(ProjectSyncState.SyncError(error, syncedProjects = syncedProjects))
-                    return@flow
-                },
-                onFailure = { error ->
-                    emit(ProjectSyncState.SyncError(error, syncedProjects = syncedProjects))
-                    return@flow
+            onFailure = { error ->
+                when(error){
+                    is RegisterProjectListError.UnexpectedServerResponse,
+                    is RegisterProjectListError.InternalServerError -> Either.failure(ProjectRegistrationError.ServerError())
+                    is RegisterProjectListError.Unauthorized ->
+                        Either.failure(ProjectRegistrationError.Unauthorized())
                 }
-            )
-        }
-        newCachedList.addAll(syncedProjects)
-        emit(ProjectSyncState.Synced(newCachedList))
-    }
-}
 
-sealed interface ProjectSyncState{
-    class SyncStarted() : ProjectSyncState
-    class ReceivedSaved(val newCachedProjects : List<Project>) : ProjectSyncState
-    class InProcess(val registered : Int, val total : Int) : ProjectSyncState
-    class Synced(val refreshedProjects : List<Project>) : ProjectSyncState
-    class SyncError(val error : Throwable, val syncedProjects : List<Project>) : ProjectSyncState
+            }
+        )
+    }
+
+    suspend fun registerProject(project: Project, session: Session) : Either<Project, ProjectRegistrationError>{
+        return projectRemoteDatasource.registerNewProject(project.name, session.toUserSession()).fold(
+            onSuccess = { registrationResult ->
+                Either.success(project.copy(serverID = registrationResult.project.projectID.value))
+            },
+            onNetworkError = {
+                Either.failure(ProjectRegistrationError.ConnectionError())
+            },
+            onFailure = { error ->
+                when(error){
+                    is RegisterProjectError.InternalServerError,
+                    is RegisterProjectError.UnexpectedServerResponse ->
+                        Either.failure(ProjectRegistrationError.ServerError())
+                    is RegisterProjectError.Unauthorized ->
+                        Either.failure(ProjectRegistrationError.Unauthorized())
+                }
+            }
+        )
+    }
+
+    suspend fun updateProjectServerID(projectID : String, serverProjectID : String){
+        projectLocalDatasource.updateServerIDAfterProjectRegistration(
+            projectID = projectID,
+            serverProjectID = serverProjectID
+        )
+    }
+
+    suspend fun createUnregisteredProject(projectName : String, session: Session) : Project{
+        val createdProjectEntity = projectLocalDatasource.createUnregisteredProject(
+            projectName = projectName,
+            userPhone = session.user.phone
+        )
+        return Project.fromEntity(createdProjectEntity, Role.Owner.toInt())
+    }
+    suspend fun cacheRegisteredProjects(registeredProjects : List<Project>) {
+        projectLocalDatasource.saveRegisteredProjectList(registeredProjects.map { it.toEntity() })
+    }
+    suspend fun updateCachedProjects(serverProjects : List<Project>, cachedProjects : List<Project>) : List<Project> {
+        val cachedProjectsServerID = cachedProjects.map { it.serverID }
+        val uncachedProjects = serverProjects.filter { it.serverID !in cachedProjectsServerID}
+        projectLocalDatasource.saveRegisteredProjectList(uncachedProjects.map { it.toEntity() })
+        return ArrayList(cachedProjects + uncachedProjects)
+    }
+
+
 }

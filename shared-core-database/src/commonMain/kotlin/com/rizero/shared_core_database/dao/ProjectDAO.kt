@@ -3,6 +3,7 @@ package com.rizero.shared_core_database.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import androidx.room.OnConflictStrategy.Companion.IGNORE
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -18,48 +19,26 @@ interface ProjectDAO {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(project : ProjectEntity)
-    @Insert
-    suspend fun insertMembership(projectMembership: ProjectMembershipEntity)
-
-    @Insert
+    @Insert(onConflict = IGNORE)
     suspend fun insertAll(projects : List<ProjectEntity>)
 
-    @OptIn(ExperimentalUuidApi::class)
-    @Transaction
-    suspend fun saveNewProject(projectName : String, userPhone : String) {
-        val generatedUUID = Uuid.random().toHexDashString()
-        insert(ProjectEntity(
-            projectID = generatedUUID,
-            serverProjectID = null,
-            name = projectName,
-            membersCount = 1
-        ))
-        insertMembership(ProjectMembershipEntity(
-            userPhone = userPhone,
-            projectID = generatedUUID,
-            role = 1 //Owner role
-        ))
-    }
-
-    @Transaction
-    suspend fun saveRegisteredOnServerProject(project: ProjectEntity, membership: ProjectMembershipEntity){
-        insert(project)
-        insertMembership(membership)
-    }
-
-
-    @Query("""
-        SELECT * FROM projects WHERE projectID = :projectID
-    """)
-    suspend fun findByID(projectID : String)
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateProject(project: ProjectEntity)
 
     @Update
-    suspend fun updateProject(project: ProjectEntity)
+    suspend fun updateProjects(projects : List<ProjectEntity>)
 
     @Query(
         """
-            UPDATE projects SET serverProjectID = :serverProjectID WHERE projectID = :projectID
+            UPDATE projects SET server_project_id = :serverProjectID WHERE project_id = :projectID
         """
     )
     suspend fun updateAfterRegistrationOnServer(projectID: String, serverProjectID : String)
+
+    @Query("""
+        SELECT * FROM projects WHERE project_id = :projectID
+    """)
+    suspend fun findByID(projectID : String) : ProjectEntity
+
+
 }

@@ -6,6 +6,7 @@ import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineBootstrapper
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
 import com.rizero.feature_authorization.AuthorizationStore.Label
+import com.rizero.feature_authorization.AuthorizationStore.Label.*
 import com.rizero.feature_authorization.AuthorizationStoreFactory.Action.*
 import com.rizero.feature_authorization.AuthorizationStoreFactory.Message.*
 import com.rizero.shared_core_data.exceptions.LogInError
@@ -19,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
-import kotlin.time.ExperimentalTime
 
 interface AuthorizationStore : Store<AuthorizationStore.Intent, AuthorizationStore.State, Label> {
     sealed class Label{
@@ -36,7 +36,8 @@ interface AuthorizationStore : Store<AuthorizationStore.Intent, AuthorizationSto
         val phoneNumber : String = "",
         val password : String = "",
         val error : AuthorizationError? = null,
-        val isLoading : Boolean = false,
+        val authorizationInProcess : Boolean = false,
+        val initialSessionCheckInProcess : Boolean = true,
     )
     sealed interface AuthorizationError{
         object InvalidCredentials : AuthorizationError
@@ -52,10 +53,13 @@ class AuthorizationStoreFactory(
     private val sessionRepository : SessionRepository,
     private val userRepository: UserRepository
 ) {
-    fun create(): AuthorizationStore =
+    fun create(expiredSession : Session? = null): AuthorizationStore =
         object : AuthorizationStore, Store<AuthorizationStore.Intent, AuthorizationStore.State, Label> by storeFactory.create(
             name = "AuthorizationStore",
-            initialState = AuthorizationStore.State(),
+            initialState = AuthorizationStore.State(
+                phoneNumber = expiredSession?.user?.phone ?: "",
+                initialSessionCheckInProcess = expiredSession == null
+            ),
             executorFactory = {
                 ExecutorImpl(
                     sessionRepository = sessionRepository,
@@ -63,7 +67,7 @@ class AuthorizationStoreFactory(
                 )
             },
             reducer = ReducerImpl,
-            bootstrapper = BootstrapperImpl(sessionRepository = sessionRepository)
+            bootstrapper = BootstrapperImpl()
         ) {
 
         }
@@ -81,27 +85,14 @@ class AuthorizationStoreFactory(
             val phone : String,
             val password : String,
         ) : Action()
+
+        data object GetCachedSession : Action()
+
+        data class CheckSessionValid(val session: Session) : Action()
     }
-    private class BootstrapperImpl(
-        private val sessionRepository: SessionRepository
-    ) : CoroutineBootstrapper<Action>() {
-        @OptIn(ExperimentalTime::class)
+    private class BootstrapperImpl() : CoroutineBootstrapper<Action>() {
         override fun invoke() {
-            scope.launch {
-                val savedSession = sessionRepository.getCurrentSession()
-                if (savedSession != null){
-                    val token = savedSession.token
-                    val nowTime = Clock.System.now().toEpochMilliseconds()
-                    val day = 24.hours.inWholeMilliseconds
-                    if (nowTime + day < token.expireAt){
-                        //token expiration more than 1 day, no need to refresh token
-                        dispatch(SkipAuthentication(savedSession))
-                    }else{
-                        //token expiration less than 1 day, need to refresh token
-                        //todo refresh token (сделать когда будет endpoint на сервере)
-                    }
-                }
-            }
+
         }
     }
     private class ExecutorImpl(
@@ -125,6 +116,23 @@ class AuthorizationStoreFactory(
         override fun executeAction(action: Action) {
             val state = state()
             when(action){
+                GetCachedSession -> {
+                    scope.launch(Dispatchers.IO) {
+                        val savedSession = sessionRepository.getCachedSession()
+                        if (savedSession!=null){
+                            withContext(Dispatchers.Main){
+                                forward(CheckSessionValid(savedSession))
+                            }
+                        }
+                    }
+                }
+                is CheckSessionValid -> {
+                    //TODO Занимаюсь хуйней, надо вынести в отдельный стор и экран начальную проверку сессии иначе уже жестко нарушается SRP
+                }
+                is SkipAuthentication -> {
+                    publish(SuccessfulLogIn(action.session))
+                    dispatch(AuthorizationCompleted)
+                }
                 ValidateInput -> {
                     if (!validatePhone(state.phoneNumber)) {
                         dispatch(AuthorizationFailed(AuthorizationStore.AuthorizationError.IncorrectPhoneInput))
@@ -145,7 +153,7 @@ class AuthorizationStoreFactory(
                                     scope.launch(Dispatchers.IO) {
                                         userRepository.saveUser(session.user)
                                     }
-                                    publish(Label.SuccessfulLogIn(session))
+                                    publish(SuccessfulLogIn(session))
                                     dispatch(AuthorizationCompleted)
                                 },
                                 onError = { error->
@@ -162,10 +170,6 @@ class AuthorizationStoreFactory(
                             )
                         }
                     }
-                }
-                is SkipAuthentication -> {
-                    publish(Label.SuccessfulLogIn(action.session))
-                    dispatch(AuthorizationCompleted)
                 }
             }
         }
@@ -188,15 +192,15 @@ class AuthorizationStoreFactory(
             return when(msg){
                 is AuthorizationFailed -> {
                     if (msg.error is AuthorizationStore.AuthorizationError.IncorrectPasswordInput){
-                        copy(error = AuthorizationStore.AuthorizationError.InvalidCredentials, isLoading = false)
+                        copy(error = AuthorizationStore.AuthorizationError.InvalidCredentials, authorizationInProcess = false)
                     }else{
-                        copy(error = msg.error, isLoading = false)
+                        copy(error = msg.error, authorizationInProcess = false)
                     }
                 }
                 is PhoneChanged -> copy(phoneNumber = msg.newPhone)
                 is PasswordChanged -> copy(password = msg.newPassword)
-                AuthorizationCompleted -> copy(isLoading = false)
-                AuthorizationInProcess -> copy(isLoading = true, error = null)
+                AuthorizationCompleted -> copy(authorizationInProcess = false)
+                AuthorizationInProcess -> copy(authorizationInProcess = true, error = null)
             }
         }
     }

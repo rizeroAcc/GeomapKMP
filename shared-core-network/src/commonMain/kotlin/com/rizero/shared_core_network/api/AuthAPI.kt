@@ -6,6 +6,7 @@ import com.mapprjct.model.request.auth.RegistrationRequest
 import com.mapprjct.model.request.auth.SignInRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -17,6 +18,8 @@ interface AuthAPI {
     suspend fun signIn(credentials: UserCredentials) : HttpResponse
     suspend fun signOut(token : String) : HttpResponse
     suspend fun signUp(username : Username, credentials: UserCredentials) : HttpResponse
+    suspend fun validateToken(token: String): HttpResponse
+    suspend fun refreshToken(token: String) : HttpResponse
 }
 
 @Single
@@ -47,9 +50,23 @@ class DefaultAuthAPI(val client : HttpClient) : AuthAPI {
             setBody(request)
         }
     }
+
     override suspend fun signOut(token : String) : HttpResponse {
         return client.post("/logout") {
             headers.append("Authorization", token)
         }
     }
+
+    override suspend fun validateToken(token: String): HttpResponse {
+        return client.get("/validate_token") {
+            headers.append("Authorization", token)
+        }
+    }
+
+    override suspend fun refreshToken(token: String) : HttpResponse{
+        return client.post("/refresh_token") {
+            headers.append("Authorization", token)
+        }
+    }
+
 }

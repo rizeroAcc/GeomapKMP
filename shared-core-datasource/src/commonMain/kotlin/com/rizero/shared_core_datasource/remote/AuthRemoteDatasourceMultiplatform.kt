@@ -3,8 +3,10 @@ package com.rizero.shared_core_datasource.remote
 import com.mapprjct.model.datatype.Username
 import com.mapprjct.model.dto.User
 import com.mapprjct.model.dto.UserCredentials
+import com.mapprjct.model.response.auth.RefreshTokenResponse
 import com.mapprjct.model.response.auth.RegistrationResponse
 import com.mapprjct.model.response.auth.SignInResponse
+import com.rizero.shared_core_datasource.exception.auth.RefreshTokenError
 import com.rizero.shared_core_datasource.exception.auth.SignInError
 import com.rizero.shared_core_datasource.exception.auth.SignOutError
 import com.rizero.shared_core_datasource.exception.auth.SignUpError
@@ -14,7 +16,13 @@ import com.rizero.shared_core_network.model.UserSession
 import com.rizero.shared_core_utils.NetworkResult
 import com.rizero.shared_core_utils.bodySafely
 import com.rizero.shared_core_utils.defaultNetworkCall
+import com.rizero.shared_core_utils.exceptions.ConnectionException
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.http.HttpStatusCode
+import io.ktor.utils.io.CancellationException
+import kotlinx.io.IOException
 import org.koin.core.annotation.Single
 
 @Single
@@ -72,6 +80,39 @@ class AuthRemoteDatasourceMultiplatform(
                     HttpStatusCode.InternalServerError -> SignOutError.InternalServerError()
                     HttpStatusCode.NotFound -> SignOutError.SessionAlreadyNotActive()
                     else -> SignOutError.UnexpectedServerResponse()
+                }
+            }
+        )
+    }
+
+    override suspend fun checkTokenValid(token: String): NetworkResult<Boolean, Nothing> {
+        return try {
+            NetworkResult.Success(authAPI.validateToken(token).status == HttpStatusCode.OK)
+        }catch(e : CancellationException) {
+            throw e
+        }catch (e : HttpRequestTimeoutException){
+            NetworkResult.Failure.NetworkError(ConnectionException(e))
+        }catch (e : ConnectTimeoutException){
+            NetworkResult.Failure.NetworkError(ConnectionException(e))
+        }catch (e : SocketTimeoutException){
+            NetworkResult.Failure.NetworkError(ConnectionException(e))
+        }catch (e : IOException){
+            NetworkResult.Failure.NetworkError(ConnectionException(e))
+        }
+    }
+
+    override suspend fun refreshSession(token: String) : NetworkResult<Pair<String,Long>, RefreshTokenError>{
+        return defaultNetworkCall<RefreshTokenResponse,Pair<String,Long>,RefreshTokenError>(
+            call = {
+                authAPI.refreshToken(token)
+            },
+            onRequestSuccess = { body,response ->
+                response.headers["Authorization"]!! to body.tokenExpireAt
+            },
+            onRequestFailure = { status, response ->
+                when(status){
+                    HttpStatusCode.Unauthorized -> RefreshTokenError.Unauthorized()
+                    else -> RefreshTokenError.ServerError()
                 }
             }
         )

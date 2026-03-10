@@ -12,6 +12,7 @@ data class UserEntity(
     @ColumnInfo(index = true)
     val phone : String,
     val username : String,
+    @ColumnInfo(name = "avatar_path")
     val avatarPath : String?,
 )
 

@@ -1,6 +1,7 @@
 package com.rizero.geomapkmp
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.errorhandler.onDecomposeError
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.replaceAll
@@ -45,7 +46,10 @@ class RootComponent(
                     projectFlowComponentFactory(
                         componentContext,
                         session = config.session,
-                        logOutCallback = ::resetToAuthenticationFlow
+                        logOutCallback = ::resetToAuthenticationFlow,
+                        onSessionExpiredCallback = {
+                            resetToAuthenticationFlow()
+                        }
                     )
                 )
             }

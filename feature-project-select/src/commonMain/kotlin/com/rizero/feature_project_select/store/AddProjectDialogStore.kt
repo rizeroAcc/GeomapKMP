@@ -7,20 +7,36 @@ import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineBootstrapper
 import com.rizero.feature_project_select.ProjectSelectorState
 import com.rizero.shared_core_data.model.Project
+import com.rizero.feature_project_select.store.AddProjectDialogStore.*
+import com.rizero.feature_project_select.store.AddProjectDialogStore.Label.*
+import com.rizero.feature_project_select.store.AddProjectDialogStoreFactory.Action.*
+import com.rizero.shared_core_data.exceptions.ProjectRegistrationError
+import com.rizero.shared_core_data.model.Session
+import com.rizero.shared_core_data.repository.ProjectRepository
+import com.rizero.shared_core_utils.fold
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-interface AddProjectDialogStore
-    :
-    Store<AddProjectDialogStore.Intent, AddProjectDialogStore.State, AddProjectDialogStore.Label> {
+interface AddProjectDialogStore : Store<Intent, State, Label> {
     sealed class Intent{
         data class ChangeProjectName(val name : String) : Intent()
         data class ChangeJoinCode(val code : String) : Intent()
         data class ChangeSelectorState(val selectorState : ProjectSelectorState) : Intent()
-        data class CreateNewProject(val projectName : String) : Intent()
+        data object CreateNewProject : Intent()
         data class JoinProject(val joinCode : String) : Intent()
     }
-    sealed class Label{
-        data class ProjectCreated(val project : Project) : Label()
-        data class JoinedToProject(val project : Project) : Label()
+    sealed interface Label{
+        data class ProjectCreatedAndRegistered(val project : Project) : Label
+        data class CreatedUnregisteredProject(val project: Project, val cause : Cause) : Label {
+            sealed interface Cause{
+                object Network : Cause
+                object Server : Cause
+                object Unauthorized : Cause
+            }
+        }
+        data class JoinedToProject(val project : Project) : Label
     }
     data class State(
         val projectSelectorState : ProjectSelectorState = ProjectSelectorState.NEW_PROJECT,
@@ -32,52 +48,110 @@ interface AddProjectDialogStore
 
 class AddProjectDialogStoreFactory(
     val storeFactory: StoreFactory,
+    val projectRepository: ProjectRepository,
 ){
-    fun create(): AddProjectDialogStore = object : AddProjectDialogStore,
-        Store<AddProjectDialogStore.Intent, AddProjectDialogStore.State, AddProjectDialogStore.Label> by storeFactory.create(
+    fun create(session: Session): AddProjectDialogStore =
+        object : AddProjectDialogStore, Store<Intent, State, Label> by storeFactory.create(
             name = "AddProjectDialogStore",
-            initialState = AddProjectDialogStore.State(),
+            initialState = State(),
             bootstrapper = BootstrapperImpl(),
-            executorFactory = { Executor() },
+            executorFactory = {
+                Executor(
+                    session = session,
+                    projectRepository = projectRepository
+                )
+            },
             reducer = ReducerImp()
         ){
 
     }
 
-    sealed class Message{
-        data class ProjectNameChanged(val name : String) : Message()
-        data class JoinCodeChanged(val code : String) : Message()
-        data class SelectorStateChanged(val selectorState: ProjectSelectorState) : Message()
+    sealed interface Message{
+        data class ProjectNameChanged(val name : String) : Message
+        data class JoinCodeChanged(val code : String) : Message
+        data class SelectorStateChanged(val selectorState: ProjectSelectorState) : Message
+        data object LoadingStarted : Message
+        data object LoadingFinished : Message
+
     }
 
-    sealed class Action{
-        data class CreateNewProject(val projectName : String) : Action()
-        data class JoinToProject(val joinCode : String) : Action()
+    sealed interface Action{
+        data class StartProjectRegistration(val projectName : String) : Action
+        data class CreateLocalProject(val projectName: String) : Action
+        data class RegisterCreatedProjectOnServer(val project: Project) : Action
+        data class JoinToProject(val joinCode : String) : Action
     }
 
-    class Executor() :
-        CoroutineExecutor<
-                AddProjectDialogStore.Intent,
-                Action,
-                AddProjectDialogStore.State,
-                Message,
-                AddProjectDialogStore.Label>(){
-        override fun executeIntent(intent: AddProjectDialogStore.Intent) {
+    class Executor(
+        val session: Session,
+        val projectRepository: ProjectRepository,
+    ) : CoroutineExecutor<Intent, Action, State, Message, Label>(){
+        override fun executeIntent(intent: Intent) {
+            val state = state()
             when(intent) {
-                is AddProjectDialogStore.Intent.ChangeJoinCode -> dispatch(Message.JoinCodeChanged(intent.code))
-                is AddProjectDialogStore.Intent.ChangeProjectName -> dispatch(Message.ProjectNameChanged(intent.name))
-                is AddProjectDialogStore.Intent.ChangeSelectorState -> dispatch(Message.SelectorStateChanged(intent.selectorState))
-                is AddProjectDialogStore.Intent.CreateNewProject -> {
-                    //todo
+                is Intent.ChangeJoinCode -> {
+                    if (!state.isLoading) {
+                        dispatch(Message.JoinCodeChanged(intent.code))
+                    }
                 }
-                is AddProjectDialogStore.Intent.JoinProject -> {
+                is Intent.ChangeProjectName -> {
+                    if (!state.isLoading) {
+                        dispatch(Message.ProjectNameChanged(intent.name))
+                    }
+                }
+                is Intent.ChangeSelectorState -> {
+                    if (!state.isLoading) {
+                        dispatch(Message.SelectorStateChanged(intent.selectorState))
+                    }
+                }
+                is Intent.CreateNewProject -> {
+                    forward(StartProjectRegistration(state.newProjectName))
+                }
+                is Intent.JoinProject -> {
                     //todo
                 }
             }
         }
 
         override fun executeAction(action: Action) {
-
+            when(action) {
+                is StartProjectRegistration -> {
+                    dispatch(Message.LoadingStarted)
+                    forward(CreateLocalProject(action.projectName))
+                }
+                is CreateLocalProject -> {
+                    scope.launch(Dispatchers.Main.immediate) {
+                        val cachedProject = projectRepository.createUnregisteredProject(action.projectName, session = session)
+                        forward(RegisterCreatedProjectOnServer(cachedProject))
+                    }
+                }
+                is RegisterCreatedProjectOnServer -> {
+                    scope.launch(Dispatchers.IO) {
+                        projectRepository.registerProject(action.project,session).fold(
+                            onSuccess = { project->
+                                projectRepository.updateProjectServerID(project.id,project.serverID!!)
+                                publish(ProjectCreatedAndRegistered(project))
+                            },
+                            onError = {  error->
+                                when(error) {
+                                    is ProjectRegistrationError.ConnectionError ->
+                                        publish(CreatedUnregisteredProject(action.project, CreatedUnregisteredProject.Cause.Network))
+                                    is ProjectRegistrationError.ServerError ->
+                                        publish(CreatedUnregisteredProject(action.project, CreatedUnregisteredProject.Cause.Server))
+                                    is ProjectRegistrationError.Unauthorized ->
+                                        publish(CreatedUnregisteredProject(action.project, CreatedUnregisteredProject.Cause.Unauthorized))
+                                }
+                            }
+                        )
+                        withContext(Dispatchers.Main){
+                            dispatch(Message.LoadingFinished)
+                        }
+                    }
+                }
+                is JoinToProject -> {
+                    TODO()
+                }
+            }
         }
     }
 
@@ -85,12 +159,14 @@ class AddProjectDialogStoreFactory(
         override fun invoke() {}
     }
 
-    class ReducerImp() : Reducer<AddProjectDialogStore.State, Message> {
-        override fun AddProjectDialogStore.State.reduce(msg: Message): AddProjectDialogStore.State {
+    class ReducerImp() : Reducer<State, Message> {
+        override fun State.reduce(msg: Message): State {
             return when(msg) {
                 is Message.JoinCodeChanged -> copy(joinCode = msg.code)
                 is Message.ProjectNameChanged -> copy(newProjectName = msg.name)
                 is Message.SelectorStateChanged -> copy(projectSelectorState = msg.selectorState)
+                Message.LoadingStarted -> copy(isLoading = true)
+                Message.LoadingFinished -> copy(isLoading = false)
             }
         }
     }

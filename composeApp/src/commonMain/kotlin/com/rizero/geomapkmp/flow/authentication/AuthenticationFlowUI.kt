@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.rizero.feature_authorization.ui.AuthorizationScreen
+import com.rizero.feature_authorization.ui.InitialSessionLoadScreen
 import com.rizero.feature_registration.ui.RegistrationScreen
 
 @Composable
@@ -24,6 +25,7 @@ fun AuthenticationFlowUI(authenticationFlowComponent: AuthenticationFlowComponen
         when(val instance = child.instance){
             is AuthenticationFlowComponent.Child.Authorization -> AuthorizationScreen(instance.authorizationComponent)
             is AuthenticationFlowComponent.Child.Registration -> RegistrationScreen(instance.registrationComponent)
+            is AuthenticationFlowComponent.Child.InitialLoadPage -> InitialSessionLoadScreen(instance.initialSessionLoadComponent)
         }
     }
 }

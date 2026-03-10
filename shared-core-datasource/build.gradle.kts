@@ -52,6 +52,8 @@ kotlin {
                 implementation(libs.ktor.client.core)
                 implementation(libs.kotlin.stdlib)
 
+                implementation(libs.room.runtime)
+
                 implementation(projects.sharedCoreUtils)
                 api(projects.sharedCoreNetwork)
                 api(projects.sharedCoreDatabase)

@@ -5,13 +5,14 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.slot.ChildSlot
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
-import com.rizero.feature_project_select.store.ProjectSelectionStore
+import com.rizero.feature_project_select.store.ProjectListStore
 import com.rizero.shared_core_component.decompose.IconButtonTopBarComponent
+import com.rizero.shared_core_data.model.Session
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface ProjectSelectComponent {
-    val stateFlow : StateFlow<ProjectSelectionStore.State>
+    val stateFlow : StateFlow<ProjectListStore.State>
     val topBarComponent : IconButtonTopBarComponent
 
     val addProjectDialog : Value<ChildSlot<*, AddProjectDialogComponent>>
@@ -23,14 +24,16 @@ interface ProjectSelectComponent {
     fun closeAddProjectDialog()
     fun interface Factory{
         operator fun invoke(
+            session: Session,
             componentContext: ComponentContext,
-            onProfileIconClick : ()-> Unit
+            onProfileIconClick : ()-> Unit,
+            onSessionExpired: (Session) -> Unit,
         ) : ProjectSelectComponent
     }
 }
 
 class MockProjectSelectComponent(
-    state : ProjectSelectionStore.State,
+    state : ProjectListStore.State,
     dialogComponent: AddProjectDialogComponent? = null,
     override val topBarComponent: IconButtonTopBarComponent
 ) : ProjectSelectComponent{
@@ -39,7 +42,7 @@ class MockProjectSelectComponent(
         MutableValue(ChildSlot(dialogComponent?.let {
             Child.Created(Any(),dialogComponent)
         }))
-    override val stateFlow: StateFlow<ProjectSelectionStore.State> = MutableStateFlow(state)
+    override val stateFlow: StateFlow<ProjectListStore.State> = MutableStateFlow(state)
     override fun refreshProjectList() = Unit
     override fun openAddProjectDialog() = Unit
     override fun closeAddProjectDialog() = Unit
