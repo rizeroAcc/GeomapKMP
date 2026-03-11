@@ -21,6 +21,11 @@ import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.ProjectRepository
 import com.rizero.shared_core_data.repository.SessionRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Factory
@@ -38,7 +43,7 @@ class DefaultProjectSelectComponent(
     val scope = coroutineScope()
 
     init {
-        scope.launch(Dispatchers.Default) {
+        scope.launch() {
             store.labels.collect { label ->
                 when(label) {
                     ProjectListStore.Label.SessionExpired -> {
@@ -67,11 +72,26 @@ class DefaultProjectSelectComponent(
             componentContext = childComponentContext,
             session = session,
             projectCreatedCallback = { project, error->
+                closeAddProjectDialog()
                 store.accept(ProjectListStore.Intent.ReloadFromCache)
-                //todo display error
+                if (error != null){
+                    scope.launch(Dispatchers.Main) {
+                        _projectRegistrationError.update {
+                            when(error) {
+                                DefaultAddProjectDialogComponent.ProjectRegistrationError.NETWORK_UNAVAILABLE -> ProjectSelectComponent.ProjectRegistrationError.NETWORK
+                                DefaultAddProjectDialogComponent.ProjectRegistrationError.SERVER_ERROR -> ProjectSelectComponent.ProjectRegistrationError.SERVER
+                                DefaultAddProjectDialogComponent.ProjectRegistrationError.UNAUTHORIZED -> ProjectSelectComponent.ProjectRegistrationError.UNAUTHORIZED
+                            }
+                        }
+                        delay(3000)
+                        _projectRegistrationError.update { null }
+                    }
+                }
             }
         )
     }
+    private val _projectRegistrationError : MutableStateFlow<ProjectSelectComponent.ProjectRegistrationError?> = MutableStateFlow(null)
+    override val projectRegistrationError: StateFlow<ProjectSelectComponent.ProjectRegistrationError?> = _projectRegistrationError.asStateFlow()
     val store : ProjectListStore = instanceKeeper.getStore {
         ProjectSelectionStoreFactory(
             storeFactory = storeFactory,
@@ -85,12 +105,9 @@ class DefaultProjectSelectComponent(
     override fun refreshProjectList(){
         store.accept(ProjectListStore.Intent.ReloadProjectList)
     }
-
     override fun openAddProjectDialog() {
         dialogNavigation.activate(AddProjectDialogConfig("AddProjectDialog"))
     }
-
-
     override fun closeAddProjectDialog() {
         dialogNavigation.dismiss()
     }

@@ -19,6 +19,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+//TODO Подумать о защите от повторного создания проектов(Создались на сервере но ответ на клиет не пришел по итогу он стянет уже зареганые и повторно зарегает свои проекты)
+
 interface ProjectListStore : Store<Intent, State, Label> {
     sealed interface Label{
         data object SessionExpired : Label
@@ -151,6 +153,7 @@ class ProjectSelectionStoreFactory(
                     val displayList = state().projectList
                     val registeredProjects = action.registeredProjects
                     scope.launch(Dispatchers.IO) {
+                        //todo обновлять епта id уже существующих
                         projectRepository.cacheRegisteredProjects(registeredProjects)
                         val registeredMap = registeredProjects.associateBy { it.id }
                         val registeredCachedProjects = displayList.map { project ->

@@ -2,21 +2,28 @@ package com.rizero.feature_project_select.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +47,7 @@ import geomapkmp.feature_project_select.generated.resources.Res
 import geomapkmp.feature_project_select.generated.resources.add
 import io.github.lmbotero.pulltorefresh.ui.PullToRefreshLayout
 import io.github.lmbotero.pulltorefresh.util.RefreshStateEvent
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -48,7 +56,7 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
 
     val addProjectDialog by projectSelectionComponent.addProjectDialog.subscribeAsState()
     val topBarComponent = projectSelectionComponent.topBarComponent
-
+    val projectRegistrationError by projectSelectionComponent.projectRegistrationError.collectAsState()
     Scaffold(
         topBar = {
             ProfileTopAppBar(topBarComponent)
@@ -67,46 +75,78 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
                     )
                 }
             }
-        }
-    ) { innerPadding->
-
-        PullToRefreshLayout(
-            refreshStateEvent = RefreshStateEvent(
-                isRefreshing = state.isProjectListLoading,
-                onRefresh = projectSelectionComponent::refreshProjectList
-            ),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            if (state.projectList.isEmpty()) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
+        },
+        snackbarHost = {
+            projectRegistrationError?.let {
+                Card() {
                     Text(
-                        text = "Список проектов пуст",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium
+                        text = when(it){
+                            ProjectSelectComponent.ProjectRegistrationError.NETWORK -> "Network error"
+                            ProjectSelectComponent.ProjectRegistrationError.SERVER -> "Server error"
+                            ProjectSelectComponent.ProjectRegistrationError.UNAUTHORIZED -> "Unauthorized"
+                        },
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(12.dp)
                     )
-                }
-            }else{
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color = AppTheme.Colors.DefaultPageBackgroundColor),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 8.dp, start = 20.dp, end = 20.dp)
-                ) {
-                    items(state.projectList.size) {itemIndex ->
-                        ProjectCard(state.projectList[itemIndex])
-                    }
                 }
             }
         }
+    ) { innerPadding->
+
+//        PullToRefreshLayout(
+//            refreshStateEvent = RefreshStateEvent(
+//                isRefreshing = state.isProjectListLoading,
+//                onRefresh = projectSelectionComponent::refreshProjectList
+//            ),
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .padding(innerPadding)
+//        )
+        PullToRefreshBox(
+            isRefreshing = state.isProjectListLoading,
+            onRefresh = projectSelectionComponent::refreshProjectList,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ){
+          if (state.projectList.isEmpty()) {
+              Box(
+                  contentAlignment = Alignment.Center,
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .padding(innerPadding)
+              ) {
+                  Text(
+                      text = "Список проектов пуст",
+                      fontSize = 20.sp,
+                      fontWeight = FontWeight.Medium
+                  )
+              }
+          }else{
+              val scrollState = rememberLazyListState()
+              val coroutineScope = rememberCoroutineScope()
+              LazyColumn(
+                  modifier = Modifier
+                      .draggable(
+                          orientation = Orientation.Vertical,
+                          state = rememberDraggableState { delta ->
+                              coroutineScope.launch {
+                                  scrollState.scrollBy(-delta)
+                              }
+                          }
+                      )
+                      .fillMaxSize()
+                      .background(color = AppTheme.Colors.DefaultPageBackgroundColor),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.spacedBy(8.dp),
+                  contentPadding = PaddingValues(top = 8.dp, start = 20.dp, end = 20.dp)
+              ) {
+                  items(state.projectList.size) {itemIndex ->
+                      ProjectCard(state.projectList[itemIndex])
+                  }
+              }
+          }
+      }
     }
     //todo watch better way
     addProjectDialog.child?.instance?.let { dialogComponent ->
@@ -158,10 +198,8 @@ fun ProjectSelectionScreenPreview(){
                     )
                 )
             ),
-            topBarComponent = MockIconButtonTopBarComponent("Проекты")
-//        dialogComponent = MockAddProjectDialogComponent(
-//            state = AddProjectDialogStore.State()
-//        )
+            topBarComponent = MockIconButtonTopBarComponent("Проекты"),
+            registrationError = ProjectSelectComponent.ProjectRegistrationError.SERVER
         )
     )
 }

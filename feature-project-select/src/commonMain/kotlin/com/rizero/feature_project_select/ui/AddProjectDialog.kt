@@ -7,13 +7,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -133,7 +138,10 @@ fun CreateProjectDialog(
 
         Button(
             colors = ButtonDefaults.buttonColors(
-                containerColor = AppTheme.Colors.DefaultButtonColor
+                containerColor = if(state.isLoading)
+                    Color.Gray
+                else
+                    AppTheme.Colors.DefaultButtonColor
             ),
             onClick = {
                 addProjectDialogComponent.createProject()
@@ -142,13 +150,19 @@ fun CreateProjectDialog(
                 .padding(top = 18.dp)
                 .size(220.dp,60.dp)
         ) {
-            Text(
-                text = when(state.projectSelectorState) {
-                    ProjectSelectorState.NEW_PROJECT -> "Создать"
-                    ProjectSelectorState.JOIN_PROJECT -> "Присоединиться"
-                },
-                fontSize = 20.sp
-            )
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(40.dp)
+                )
+            }else{
+                Text(
+                    text = when (state.projectSelectorState) {
+                        ProjectSelectorState.NEW_PROJECT -> "Создать"
+                        ProjectSelectorState.JOIN_PROJECT -> "Присоединиться"
+                    },
+                    fontSize = 20.sp
+                )
+            }
         }
     }
 }
@@ -178,7 +192,8 @@ fun CreateProjectDialogJoinPreview(){
             state = AddProjectDialogStore.State(
                 projectSelectorState = ProjectSelectorState.JOIN_PROJECT,
                 newProjectName = "Имя проекта",
-                joinCode = "sgdt4y3df"
+                joinCode = "sgdt4y3df",
+                isLoading = true
             )
         )
     )

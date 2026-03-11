@@ -14,8 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 interface ProjectSelectComponent {
     val stateFlow : StateFlow<ProjectListStore.State>
     val topBarComponent : IconButtonTopBarComponent
-
     val addProjectDialog : Value<ChildSlot<*, AddProjectDialogComponent>>
+
+    val projectRegistrationError : StateFlow<ProjectRegistrationError?>
 
     fun refreshProjectList()
 
@@ -30,11 +31,18 @@ interface ProjectSelectComponent {
             onSessionExpired: (Session) -> Unit,
         ) : ProjectSelectComponent
     }
+
+    enum class ProjectRegistrationError {
+        NETWORK,
+        SERVER,
+        UNAUTHORIZED,
+    }
 }
 
 class MockProjectSelectComponent(
     state : ProjectListStore.State,
     dialogComponent: AddProjectDialogComponent? = null,
+    val registrationError: ProjectSelectComponent.ProjectRegistrationError? = null,
     override val topBarComponent: IconButtonTopBarComponent
 ) : ProjectSelectComponent{
 
@@ -42,6 +50,9 @@ class MockProjectSelectComponent(
         MutableValue(ChildSlot(dialogComponent?.let {
             Child.Created(Any(),dialogComponent)
         }))
+    override val projectRegistrationError: StateFlow<ProjectSelectComponent.ProjectRegistrationError?>
+        get() = MutableStateFlow(registrationError)
+
     override val stateFlow: StateFlow<ProjectListStore.State> = MutableStateFlow(state)
     override fun refreshProjectList() = Unit
     override fun openAddProjectDialog() = Unit

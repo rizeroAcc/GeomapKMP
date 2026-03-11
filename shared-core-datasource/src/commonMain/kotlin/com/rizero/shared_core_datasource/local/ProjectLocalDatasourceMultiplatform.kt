@@ -63,6 +63,6 @@ class ProjectLocalDatasourceMultiplatform(
     }
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun saveRegisteredProjectList(projects: List<ProjectEntity>) {
-        projectDAO.insertAll(projects)
+        projectDAO.updateProjects(projects)
     }
 }
