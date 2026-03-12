@@ -4,7 +4,6 @@ package com.rizero.shared_core_datasource.local
 import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import com.mapprjct.model.datatype.Role
-import com.mapprjct.model.dto.Project
 import com.rizero.shared_core_database.AppDatabase
 import com.rizero.shared_core_database.dao.MembershipDAO
 import com.rizero.shared_core_database.dao.ProjectDAO
@@ -62,7 +61,12 @@ class ProjectLocalDatasourceMultiplatform(
         }
     }
     @OptIn(ExperimentalUuidApi::class)
-    override suspend fun saveRegisteredProjectList(projects: List<ProjectEntity>) {
-        projectDAO.updateProjects(projects)
+    override suspend fun saveRegisteredProjectList(projectsAndMemberships: List<Pair<ProjectEntity,ProjectMembershipEntity>>) {
+        database.useWriterConnection { transactor ->
+            transactor.immediateTransaction {
+                projectDAO.insertAll(projectsAndMemberships.map { it.first })
+                membershipDAO.insertMemberships(projectsAndMemberships.map { it.second })
+            }
+        }
     }
 }

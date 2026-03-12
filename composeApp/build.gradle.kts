@@ -58,6 +58,7 @@ kotlin {
             implementation(projects.featureRegistration)
             implementation(projects.featureUserProfile)
             implementation(projects.featureProjectSelect)
+            implementation(projects.featureProjectMapview)
 
             implementation(libs.decompose.core)
             implementation(libs.decompose.extensions.compose)

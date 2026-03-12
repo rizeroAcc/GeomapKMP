@@ -9,6 +9,7 @@ import com.arkivanov.decompose.router.stack.pushNew
 import com.rizero.feature_project_select.component.ProjectSelectComponent
 import com.rizero.feature_user_profile.component.DefaultUserProfileComponent
 import com.rizero.feature_user_profile.component.UserProfileComponent
+import com.rizero.shared_core_data.model.Project
 import com.rizero.shared_core_data.model.Session
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Factory
@@ -19,6 +20,7 @@ class ProjectFlowComponent(
     val session: Session,
     val logOutCallback : ()-> Unit,
     val onSessionExpiredCallback : (Session)-> Unit,
+    private val onProjectSelected : (Project)-> Unit,
     private val projectSelectionComponentFactory: ProjectSelectComponent.Factory,
     private val userProfileComponentFactory: UserProfileComponent.Factory,
 ) : ComponentContext by componentContext {
@@ -41,16 +43,15 @@ class ProjectFlowComponent(
                 session = session,
                 componentContext,
                 onProfileIconClick = ::openUserProfile,
-                onSessionExpired = { session->
-                    onSessionExpiredCallback(session)
-                }
+                onSessionExpired =  onSessionExpiredCallback,
+                onProjectSelected = onProjectSelected,
             )
         )
         ScreenConfig.UserProfile -> Child.UserProfile(
             userProfileComponentFactory(
                 componentContext,
                 backNavigateCallback = ::navigateBack,
-                onUserLogOut = { logOutCallback() }
+                onUserLogOut = logOutCallback
             )
         )
     }
@@ -78,7 +79,7 @@ class ProjectFlowComponent(
         class UserProfile(val userProfileComponent: UserProfileComponent) : Child
     }
 
-    @Factory
+    @Single
     class ComponentFactory(
         private val projectSelectionComponentFactory: ProjectSelectComponent.Factory,
         private val userProfileComponentFactory: UserProfileComponent.Factory,
@@ -88,6 +89,7 @@ class ProjectFlowComponent(
             session: Session,
             logOutCallback : ()-> Unit,
             onSessionExpiredCallback: (Session) -> Unit,
+            onProjectSelected: (Project) -> Unit,
         ) : ProjectFlowComponent = ProjectFlowComponent(
             componentContext = componentContext,
             session = session,
@@ -95,6 +97,7 @@ class ProjectFlowComponent(
             userProfileComponentFactory = userProfileComponentFactory,
             logOutCallback = logOutCallback,
             onSessionExpiredCallback = onSessionExpiredCallback,
+            onProjectSelected = onProjectSelected,
         )
     }
 }

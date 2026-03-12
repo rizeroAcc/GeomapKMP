@@ -9,6 +9,7 @@ import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.rizero.geomapkmp.flow.authentication.AuthenticationFlowUI
 import com.rizero.geomapkmp.flow.project.HomeFlowUI
+import com.rizero.geomapkmp.flow.work.WorkflowUI
 
 @Composable
 fun RootUI(rootComponent: RootComponent){
@@ -21,6 +22,7 @@ fun RootUI(rootComponent: RootComponent){
         when(val instance = child.instance){
             is RootComponent.Child.Authentication -> AuthenticationFlowUI(instance.flow)
             is RootComponent.Child.Project -> HomeFlowUI(instance.flow)
+            is RootComponent.Child.Work -> WorkflowUI(instance.flow)
         }
     }
 }

@@ -3,16 +3,14 @@ package com.rizero.feature_project_select.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,7 +21,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,7 +33,7 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.rizero.feature_project_select.store.AddProjectDialogStore
 import com.rizero.feature_project_select.store.ProjectListStore
 import com.rizero.feature_project_select.component.MockAddProjectDialogComponent
-import com.rizero.feature_project_select.component.MockProjectSelectComponent
+import com.rizero.feature_project_select.component.PreviewProjectSelectComponent
 import com.rizero.feature_project_select.component.ProjectSelectComponent
 import com.rizero.feature_project_select.ui.component.ProjectCard
 import com.rizero.shared_core_component.decompose.MockIconButtonTopBarComponent
@@ -45,9 +42,6 @@ import com.rizero.shared_core_component.theme.AppTheme
 import com.rizero.shared_core_data.model.Project
 import geomapkmp.feature_project_select.generated.resources.Res
 import geomapkmp.feature_project_select.generated.resources.add
-import io.github.lmbotero.pulltorefresh.ui.PullToRefreshLayout
-import io.github.lmbotero.pulltorefresh.util.RefreshStateEvent
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -92,16 +86,8 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
             }
         }
     ) { innerPadding->
-
-//        PullToRefreshLayout(
-//            refreshStateEvent = RefreshStateEvent(
-//                isRefreshing = state.isProjectListLoading,
-//                onRefresh = projectSelectionComponent::refreshProjectList
-//            ),
-//            modifier = Modifier
-//                .fillMaxSize()
-//                .padding(innerPadding)
-//        )
+        val scrollState = rememberScrollState()
+        //todo платформозависимо
         PullToRefreshBox(
             isRefreshing = state.isProjectListLoading,
             onRefresh = projectSelectionComponent::refreshProjectList,
@@ -113,6 +99,10 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
               Box(
                   contentAlignment = Alignment.Center,
                   modifier = Modifier
+                      .scrollable(
+                          scrollState,
+                          Orientation.Vertical
+                      )
                       .fillMaxSize()
                       .padding(innerPadding)
               ) {
@@ -123,18 +113,10 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
                   )
               }
           }else{
-              val scrollState = rememberLazyListState()
-              val coroutineScope = rememberCoroutineScope()
+
               LazyColumn(
                   modifier = Modifier
-                      .draggable(
-                          orientation = Orientation.Vertical,
-                          state = rememberDraggableState { delta ->
-                              coroutineScope.launch {
-                                  scrollState.scrollBy(-delta)
-                              }
-                          }
-                      )
+                      .padding(bottom = 12.dp)
                       .fillMaxSize()
                       .background(color = AppTheme.Colors.DefaultPageBackgroundColor),
                   horizontalAlignment = Alignment.CenterHorizontally,
@@ -142,7 +124,9 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
                   contentPadding = PaddingValues(top = 8.dp, start = 20.dp, end = 20.dp)
               ) {
                   items(state.projectList.size) {itemIndex ->
-                      ProjectCard(state.projectList[itemIndex])
+                      ProjectCard(state.projectList[itemIndex]){
+                          println("Card ${state.projectList[itemIndex].name} clicked")
+                      }
                   }
               }
           }
@@ -161,7 +145,7 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
 @Preview(showBackground = true)
 fun ProjectSelectionScreenWithEmptyListPreview(){
     ProjectSelectionScreen(
-        MockProjectSelectComponent(
+        PreviewProjectSelectComponent(
             state = ProjectListStore.State(),
             topBarComponent = MockIconButtonTopBarComponent("Проекты")
         )
@@ -172,7 +156,7 @@ fun ProjectSelectionScreenWithEmptyListPreview(){
 @Preview(showBackground = true)
 fun ProjectSelectionScreenPreview(){
     ProjectSelectionScreen(
-        MockProjectSelectComponent(
+        PreviewProjectSelectComponent(
             state = ProjectListStore.State(
                 projectList = listOf(
                     Project(
@@ -207,7 +191,7 @@ fun ProjectSelectionScreenPreview(){
 @Composable
 @Preview(showBackground = true)
 fun ProjectSelectionScreenWithDialogPreview(){
-    ProjectSelectionScreen(MockProjectSelectComponent(
+    ProjectSelectionScreen(PreviewProjectSelectComponent(
         state = ProjectListStore.State(
             projectList = listOf(
                 Project(

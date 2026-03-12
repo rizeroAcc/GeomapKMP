@@ -17,9 +17,9 @@ import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.rizero.feature_project_select.store.ProjectListStore
 import com.rizero.feature_project_select.store.ProjectSelectionStoreFactory
 import com.rizero.shared_core_component.decompose.DefaultIconButtonTopBarComponent
+import com.rizero.shared_core_data.model.Project
 import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.ProjectRepository
-import com.rizero.shared_core_data.repository.SessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,9 +37,16 @@ class DefaultProjectSelectComponent(
     private val projectRepository: ProjectRepository,
     private val addProjectDialogComponentFactory: AddProjectDialogComponent.Factory,
     private val onProfileIconClick : ()-> Unit,
-    private val onSessionExpired: (Session) -> Unit
+    private val onSessionExpired: (Session) -> Unit,
+    private val onProjectSelected : (Project) -> Unit,
 ) : ProjectSelectComponent, ComponentContext by componentContext {
-
+    val store : ProjectListStore = instanceKeeper.getStore {
+        ProjectSelectionStoreFactory(
+            storeFactory = storeFactory,
+            projectRepository = projectRepository,
+            currentSession = session,
+        ).create()
+    }
     val scope = coroutineScope()
 
     init {
@@ -92,13 +99,6 @@ class DefaultProjectSelectComponent(
     }
     private val _projectRegistrationError : MutableStateFlow<ProjectSelectComponent.ProjectRegistrationError?> = MutableStateFlow(null)
     override val projectRegistrationError: StateFlow<ProjectSelectComponent.ProjectRegistrationError?> = _projectRegistrationError.asStateFlow()
-    val store : ProjectListStore = instanceKeeper.getStore {
-        ProjectSelectionStoreFactory(
-            storeFactory = storeFactory,
-            projectRepository = projectRepository,
-            currentSession = session,
-        ).create()
-    }
 
     override val stateFlow = store.stateFlow(lifecycle)
 
@@ -112,6 +112,10 @@ class DefaultProjectSelectComponent(
         dialogNavigation.dismiss()
     }
 
+    override fun openSelectedProject(project: Project) {
+        TODO("Not yet implemented")
+    }
+
     @Serializable
     private data class AddProjectDialogConfig(
         val tag : String
@@ -119,7 +123,6 @@ class DefaultProjectSelectComponent(
 
     @Factory
     class ComponentFactory(
-        val sessionRepository: SessionRepository,
         val projectRepository: ProjectRepository,
         val addProjectDialogComponentFactory: AddProjectDialogComponent.Factory,
     ) : ProjectSelectComponent.Factory{
@@ -128,13 +131,15 @@ class DefaultProjectSelectComponent(
             componentContext: ComponentContext,
             onProfileIconClick: () -> Unit,
             onSessionExpired: (Session) -> Unit,
+            onProjectSelected : (Project) -> Unit,
         ) = DefaultProjectSelectComponent(
             session = session,
             componentContext = componentContext,
             projectRepository = projectRepository,
             addProjectDialogComponentFactory = addProjectDialogComponentFactory,
             onProfileIconClick = onProfileIconClick,
-            onSessionExpired = onSessionExpired
+            onSessionExpired = onSessionExpired,
+            onProjectSelected = onProjectSelected
         )
     }
 }

@@ -56,9 +56,8 @@ class ProjectSelectionStoreFactory(
     }
     sealed interface Action{
         data object StartLoading : Action //Marker to start
-        data class LoadFromCache(val continueSync : Boolean) : Action
+        data class LoadFromCache(val continueSync : Boolean = true) : Action
         data class RegisterUnregisteredProjects(val cachedProjects: List<Project>) : Action
-        data class UpdateCacheAfterProjectRegistration(val registeredProjects : List<Project>) : Action
         data object LoadFromServer : Action
         data class CacheReceived(val projects : List<Project>) : Action
     }
@@ -92,7 +91,6 @@ class ProjectSelectionStoreFactory(
                 Intent.ReloadProjectList -> {
                     forward(StartLoading)
                 }
-
                 Intent.ReloadFromCache -> {
                     forward(LoadFromCache(continueSync = false))
                 }
@@ -103,16 +101,17 @@ class ProjectSelectionStoreFactory(
             when(action) {
                 StartLoading -> {
                     dispatch(ProjectListLoading)
-                    forward(LoadFromCache(continueSync = true))
+                    forward(LoadFromCache())
+
                 }
                 is LoadFromCache -> {
-                    scope.launch(Dispatchers.IO) {
-                        val cachedProjects = projectRepository.getCachedUserProjects(session = currentSession)
+                    scope.launch {
+                        val cachedProjects = projectRepository.getCachedUserProjects(userPhone = currentSession.user.phone)
                         withContext(Dispatchers.Main) {
                             dispatch(CachedProjectsLoaded(cachedProjects))
-                            if (action.continueSync) {
-                                forward(RegisterUnregisteredProjects(cachedProjects))
-                            }
+                        }
+                        if(action.continueSync){
+                            forward(RegisterUnregisteredProjects(cachedProjects))
                         }
                     }
                 }
@@ -120,53 +119,39 @@ class ProjectSelectionStoreFactory(
                     val unregisteredProjects = action.cachedProjects.filter { it.serverID == null }
                     if (unregisteredProjects.isEmpty()){
                         forward(LoadFromServer)
-                    }
-                    scope.launch(Dispatchers.IO) {
-                        projectRepository.registerProjects(unregisteredProjects, session = currentSession).fold(
-                            onSuccess = { registeredProjects->
-                                withContext(Dispatchers.Main) {
-                                    forward(action = UpdateCacheAfterProjectRegistration(registeredProjects))
-                                }
-                            },
-                            onError = { error ->
-                                when(error){
-                                    is ProjectRegistrationError.ServerError-> {
-                                        withContext(Dispatchers.Main){
+                    }else{
+                        scope.launch(Dispatchers.IO) {
+                            projectRepository.registerProjects(
+                                unregisteredProjects,
+                                session = currentSession
+                            ).fold(
+                                onSuccess = { _ ->
+                                    forward(LoadFromCache(continueSync = false))
+                                    forward(LoadFromServer)
+                                },
+                                onError = { error ->
+                                    when (error) {
+                                        is ProjectRegistrationError.ServerError -> withContext(
+                                            Dispatchers.Main
+                                        ) {
                                             dispatch(SyncError(State.SyncError.ServerError()))
                                         }
-                                    }
-                                    is ProjectRegistrationError.ConnectionError -> {
-                                        withContext(Dispatchers.Main){
+
+                                        is ProjectRegistrationError.ConnectionError -> withContext(
+                                            Dispatchers.Main
+                                        ) {
                                             dispatch(SyncError(State.SyncError.NetworkUnavailable()))
                                         }
-                                    }
-                                    is ProjectRegistrationError.Unauthorized -> withContext(Dispatchers.Main){
-                                        publish(Label.SessionExpired)
-                                        dispatch(SyncError(State.SyncError.SessionExpired()))
+
+                                        is ProjectRegistrationError.Unauthorized -> withContext(
+                                            Dispatchers.Main
+                                        ) {
+                                            publish(Label.SessionExpired)
+                                            dispatch(SyncError(State.SyncError.SessionExpired()))
+                                        }
                                     }
                                 }
-                            }
-                        )
-                    }
-                }
-                is UpdateCacheAfterProjectRegistration -> {
-                    val displayList = state().projectList
-                    val registeredProjects = action.registeredProjects
-                    scope.launch(Dispatchers.IO) {
-                        //todo обновлять епта id уже существующих
-                        projectRepository.cacheRegisteredProjects(registeredProjects)
-                        val registeredMap = registeredProjects.associateBy { it.id }
-                        val registeredCachedProjects = displayList.map { project ->
-                            registeredMap[project.id]?.let {
-                                project.copy(
-                                    serverID = it.serverID
-                                    //Change other info if need it
-                                )
-                            } ?: project
-                        }
-                        withContext(Dispatchers.Main){
-                            dispatch(CachedProjectsRegistered(registeredCachedProjects))
-                            forward(LoadFromServer)
+                            )
                         }
                     }
                 }
@@ -200,11 +185,10 @@ class ProjectSelectionStoreFactory(
                     }
                 }
                 is CacheReceived -> {
-                    val cachedProjects = state().projectList
                     scope.launch(Dispatchers.IO) {
-                        val syncedList = projectRepository.updateCachedProjects(
+                        val syncedList = projectRepository.saveReceivedProjects(
                             serverProjects = action.projects,
-                            cachedProjects = cachedProjects
+                            userPhone = currentSession.user.phone
                         )
                         withContext(Dispatchers.Main){
                             dispatch(SyncFinished(syncedList))

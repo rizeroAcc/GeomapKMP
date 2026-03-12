@@ -11,7 +11,8 @@ import com.rizero.shared_core_database.model.UserMembershipInProject
 interface MembershipDAO {
     @Insert
     suspend fun insertMembership(projectMembership: ProjectMembershipEntity)
-
+    @Insert
+    suspend fun insertMemberships(projectMemberships : List<ProjectMembershipEntity>)
     @Transaction
     @Query("""
         SELECT * FROM project_user_membership 

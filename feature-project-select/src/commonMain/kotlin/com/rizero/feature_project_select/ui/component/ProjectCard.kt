@@ -1,6 +1,7 @@
 package com.rizero.feature_project_select.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,8 +28,11 @@ import com.rizero.shared_core_component.ui.ColoredCircle
 import com.rizero.shared_core_data.model.Project
 
 @Composable
-fun ProjectCard(project: Project){
+fun ProjectCard(project: Project, onClick : () -> Unit){
     Card(
+        modifier = Modifier
+            .clip(CardDefaults.elevatedShape)
+            .clickable{ onClick() },
         elevation = CardDefaults.elevatedCardElevation(4.dp, pressedElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = AppTheme.Colors.CardBackgroundColor),
     ) {
@@ -102,6 +107,8 @@ fun ProjectCardPreview(){
             membersCount = 4,
             id = "yafd543",
             role = 2
-        )
+        ),{
+
+        }
     )
 }
