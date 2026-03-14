@@ -8,7 +8,7 @@ import com.arkivanov.decompose.router.slot.activate
 import com.arkivanov.decompose.router.slot.childSlot
 import com.arkivanov.decompose.router.slot.dismiss
 import com.arkivanov.decompose.value.Value
-import com.rizero.shared_core_component.decompose.DefaultIconButtonTopBarComponent
+import com.rizero.shared_core_component.decompose.DefaultOneButtonTopBarComponent
 import com.rizero.shared_core_data.repository.SessionRepository
 import com.rizero.shared_core_data.repository.UserRepository
 import kotlinx.serialization.Serializable
@@ -23,7 +23,7 @@ class DefaultUserProfileComponent(
     val onUserLogOut : () -> Unit,
 ) : UserProfileComponent, ComponentContext by componentContext{
 
-    override val topBarComponent = DefaultIconButtonTopBarComponent(
+    override val topBarComponent = DefaultOneButtonTopBarComponent(
         componentContext = childContext("Profile top bar"),
         headerText = "Профиль",
         onButtonClickedCallback = backNavigateCallback

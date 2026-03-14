@@ -10,6 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.arkivanov.decompose.defaultComponentContext
 import com.rizero.geomapkmp.flow.authentication.AuthenticationFlowComponent
 import com.rizero.geomapkmp.flow.project.ProjectFlowComponent
+import com.rizero.geomapkmp.flow.work.WorkFlowComponent
 import org.koin.java.KoinJavaComponent.inject
 
 class MainActivity : ComponentActivity() {
@@ -22,12 +23,16 @@ class MainActivity : ComponentActivity() {
         val projectFlowComponentFactory : ProjectFlowComponent.ComponentFactory by inject(
             ProjectFlowComponent.ComponentFactory::class.java
         )
+        val workFlowComponentFactory : WorkFlowComponent.ComponentFactory by inject(
+            WorkFlowComponent.ComponentFactory::class.java
+        )
         setContent {
             RootUI(
                 RootComponent(
                     componentContext = defaultComponentContext(),
                     authenticationFlowComponentFactory = authenticationFlowComponentFactory,
-                    projectFlowComponentFactory = projectFlowComponentFactory
+                    projectFlowComponentFactory = projectFlowComponentFactory,
+                    workFlowComponentFactory = workFlowComponentFactory
                 )
             )
         }

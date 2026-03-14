@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.rizero.feature_project_mapview.ui.MapScreen
 import com.rizero.feature_project_select.ui.ProjectSelectionScreen
 import com.rizero.feature_user_profile.ui.UserProfileScreen
 import com.rizero.geomapkmp.flow.project.ProjectFlowComponent
@@ -19,12 +20,9 @@ fun WorkflowUI(workFlowComponent: WorkFlowComponent){
             .fillMaxSize()
     ) { child ->
         when(val instance = child.instance){
-            is ProjectFlowComponent.Child.ProjectSelectionPage -> ProjectSelectionScreen(
-                instance.projectSelectionComponent
-            )
-            is ProjectFlowComponent.Child.UserProfile -> UserProfileScreen(
-                instance.userProfileComponent
-            )
+            is WorkFlowComponent.Child.Map -> {
+                MapScreen(instance.mapComponent)
+            }
         }
     }
 }

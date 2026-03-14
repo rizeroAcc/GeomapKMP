@@ -84,6 +84,7 @@ kotlin {
                 implementation(libs.compose.uiToolingPreview)
 
                 implementation(libs.maplibre.compose)
+                implementation(libs.maplibre.composeMaterial3)
 
                 implementation(projects.sharedCoreData)
                 implementation(projects.sharedCoreComponent)

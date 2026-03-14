@@ -36,7 +36,7 @@ import com.rizero.feature_project_select.component.MockAddProjectDialogComponent
 import com.rizero.feature_project_select.component.PreviewProjectSelectComponent
 import com.rizero.feature_project_select.component.ProjectSelectComponent
 import com.rizero.feature_project_select.ui.component.ProjectCard
-import com.rizero.shared_core_component.decompose.MockIconButtonTopBarComponent
+import com.rizero.shared_core_component.decompose.MockOneButtonTopBarComponent
 import com.rizero.shared_core_component.decompose.ui.ProfileTopAppBar
 import com.rizero.shared_core_component.theme.AppTheme
 import com.rizero.shared_core_data.model.Project
@@ -126,6 +126,7 @@ fun ProjectSelectionScreen(projectSelectionComponent: ProjectSelectComponent){
                   items(state.projectList.size) {itemIndex ->
                       ProjectCard(state.projectList[itemIndex]){
                           println("Card ${state.projectList[itemIndex].name} clicked")
+                          projectSelectionComponent.openSelectedProject(state.projectList[itemIndex])
                       }
                   }
               }
@@ -147,7 +148,7 @@ fun ProjectSelectionScreenWithEmptyListPreview(){
     ProjectSelectionScreen(
         PreviewProjectSelectComponent(
             state = ProjectListStore.State(),
-            topBarComponent = MockIconButtonTopBarComponent("Проекты")
+            topBarComponent = MockOneButtonTopBarComponent("Проекты")
         )
     )
 }
@@ -182,7 +183,7 @@ fun ProjectSelectionScreenPreview(){
                     )
                 )
             ),
-            topBarComponent = MockIconButtonTopBarComponent("Проекты"),
+            topBarComponent = MockOneButtonTopBarComponent("Проекты"),
             registrationError = ProjectSelectComponent.ProjectRegistrationError.SERVER
         )
     )
@@ -217,7 +218,7 @@ fun ProjectSelectionScreenWithDialogPreview(){
                 )
             )
         ),
-        topBarComponent = MockIconButtonTopBarComponent("Проекты"),
+        topBarComponent = MockOneButtonTopBarComponent("Проекты"),
         dialogComponent = MockAddProjectDialogComponent(
             state = AddProjectDialogStore.State()
         )

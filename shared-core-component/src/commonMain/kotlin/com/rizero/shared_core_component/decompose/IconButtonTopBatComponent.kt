@@ -3,12 +3,12 @@ package com.rizero.shared_core_component.decompose
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 
-interface IconButtonTopBarComponent {
+interface OneButtonTopBarComponent {
     val headerText : Value<String>
     fun onButtonClicked()
 }
 
-class MockIconButtonTopBarComponent(headerText : String) : IconButtonTopBarComponent{
+class MockOneButtonTopBarComponent(headerText : String) : OneButtonTopBarComponent{
     override val headerText: Value<String> = MutableValue(headerText)
     override fun onButtonClicked() = Unit
 }

@@ -66,6 +66,7 @@ class RootComponent(
             is ScreenConfig.Work -> {
                 Work(workFlowComponentFactory(
                     componentContext = componentContext,
+                    project = config.project
                 ))
             }
         }

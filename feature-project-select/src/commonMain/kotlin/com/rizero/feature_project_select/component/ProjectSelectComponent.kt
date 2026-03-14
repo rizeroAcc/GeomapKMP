@@ -6,7 +6,7 @@ import com.arkivanov.decompose.router.slot.ChildSlot
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.rizero.feature_project_select.store.ProjectListStore
-import com.rizero.shared_core_component.decompose.IconButtonTopBarComponent
+import com.rizero.shared_core_component.decompose.OneButtonTopBarComponent
 import com.rizero.shared_core_data.model.Project
 import com.rizero.shared_core_data.model.Session
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface ProjectSelectComponent {
     val stateFlow : StateFlow<ProjectListStore.State>
-    val topBarComponent : IconButtonTopBarComponent
+    val topBarComponent : OneButtonTopBarComponent
     val addProjectDialog : Value<ChildSlot<*, AddProjectDialogComponent>>
     val projectRegistrationError : StateFlow<ProjectRegistrationError?>
 
@@ -44,7 +44,7 @@ class PreviewProjectSelectComponent(
     state : ProjectListStore.State,
     dialogComponent: AddProjectDialogComponent? = null,
     val registrationError: ProjectSelectComponent.ProjectRegistrationError? = null,
-    override val topBarComponent: IconButtonTopBarComponent
+    override val topBarComponent: OneButtonTopBarComponent
 ) : ProjectSelectComponent{
 
     override val addProjectDialog: Value<ChildSlot<Any, AddProjectDialogComponent>> =

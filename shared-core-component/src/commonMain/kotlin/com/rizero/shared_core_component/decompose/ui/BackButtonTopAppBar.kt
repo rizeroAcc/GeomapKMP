@@ -22,16 +22,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.rizero.shared_core_component.decompose.IconButtonTopBarComponent
-import com.rizero.shared_core_component.decompose.MockIconButtonTopBarComponent
+import com.rizero.shared_core_component.decompose.OneButtonTopBarComponent
+import com.rizero.shared_core_component.decompose.MockOneButtonTopBarComponent
 import com.rizero.shared_core_component.theme.AppTheme
 import geomapkmp.shared_core_component.generated.resources.Res
-import geomapkmp.shared_core_component.generated.resources.account_circle
 import geomapkmp.shared_core_component.generated.resources.arrow_backx
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
-fun BackButtonTopAppBar(oneButtonTopBarComponent: IconButtonTopBarComponent){
+fun BackButtonTopAppBar(oneButtonTopBarComponent: OneButtonTopBarComponent){
     val headerText by oneButtonTopBarComponent.headerText.subscribeAsState()
     Box(modifier = Modifier
         .background(color = AppTheme.Colors.TopAppBarColor)
@@ -68,7 +67,7 @@ fun BackButtonTopAppBar(oneButtonTopBarComponent: IconButtonTopBarComponent){
 @Composable
 @Preview
 fun BackButtonTopAppBarPreview(){
-    BackButtonTopAppBar(MockIconButtonTopBarComponent(
+    BackButtonTopAppBar(MockOneButtonTopBarComponent(
         headerText = "Page header"
     ))
 }

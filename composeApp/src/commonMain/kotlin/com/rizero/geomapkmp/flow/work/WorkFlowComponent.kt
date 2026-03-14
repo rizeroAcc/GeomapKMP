@@ -3,6 +3,7 @@ package com.rizero.geomapkmp.flow.work
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
+import com.rizero.feature_project_mapview.component.DefaultMapScreenComponent
 import com.rizero.feature_project_mapview.component.MapScreenComponent
 import com.rizero.geomapkmp.flow.work.WorkFlowComponent.ScreenConfig
 import com.rizero.shared_core_data.model.Project
@@ -28,8 +29,10 @@ class WorkFlowComponent(
         componentContext: ComponentContext
     ) = when(screenConfig){
         is ScreenConfig.Map -> Child.Map(
-            //todo make normal
-            object : MapScreenComponent{}
+            DefaultMapScreenComponent(
+                componentContext = componentContext,
+                onHeaderClick = {}
+            )
         )
     }
 

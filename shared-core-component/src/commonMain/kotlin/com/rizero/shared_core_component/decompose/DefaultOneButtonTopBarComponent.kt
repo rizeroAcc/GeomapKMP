@@ -4,11 +4,11 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 
-class DefaultIconButtonTopBarComponent(
+class DefaultOneButtonTopBarComponent(
     val componentContext : ComponentContext,
     headerText : String,
     val onButtonClickedCallback : () -> Unit,
-) : IconButtonTopBarComponent, ComponentContext by componentContext {
+) : OneButtonTopBarComponent, ComponentContext by componentContext {
     private val headerTextHolder = MutableValue(headerText)
 
     override val headerText : Value<String> = headerTextHolder

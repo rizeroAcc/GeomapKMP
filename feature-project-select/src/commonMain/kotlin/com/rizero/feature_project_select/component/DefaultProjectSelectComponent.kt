@@ -16,7 +16,7 @@ import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.rizero.feature_project_select.store.ProjectListStore
 import com.rizero.feature_project_select.store.ProjectSelectionStoreFactory
-import com.rizero.shared_core_component.decompose.DefaultIconButtonTopBarComponent
+import com.rizero.shared_core_component.decompose.DefaultOneButtonTopBarComponent
 import com.rizero.shared_core_data.model.Project
 import com.rizero.shared_core_data.model.Session
 import com.rizero.shared_core_data.repository.ProjectRepository
@@ -61,7 +61,7 @@ class DefaultProjectSelectComponent(
         }
     }
 
-    override val topBarComponent = DefaultIconButtonTopBarComponent(
+    override val topBarComponent = DefaultOneButtonTopBarComponent(
         componentContext = childContext("ProjectScreenTopBar"),
         onButtonClickedCallback = {
             onProfileIconClick()
@@ -113,7 +113,7 @@ class DefaultProjectSelectComponent(
     }
 
     override fun openSelectedProject(project: Project) {
-        TODO("Not yet implemented")
+        onProjectSelected(project)
     }
 
     @Serializable
