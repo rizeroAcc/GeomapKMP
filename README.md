@@ -1,48 +1,40 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Desktop (JVM).
+# GeomapKMP 🗺️
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+**Kotlin Multiplatform** приложение для работы с геопроектами и картами.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Кросс-платформенное приложение на **Compose Multiplatform**, которое позволяет авторизоваться, выбирать проекты и работать с географическими картами на **Android**, **iOS** и **Desktop**.
 
-### Build and Run Android Application
+## ✨ Возможности
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+- Полностью общая кодовая база благодаря **Kotlin Multiplatform**
+- Современный UI на **Compose Multiplatform**
+- Модульная архитектура по фичам (Feature Modularization)
+- Авторизация и регистрация пользователей
+- Просмотр и выбор проектов
+- Интерактивная карта
+- Профиль пользователя
 
-### Build and Run Desktop (JVM) Application
+## 🛠 Технологический стек
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
+- **Kotlin Multiplatform**
+- **Compose Multiplatform** (Android, iOS, Desktop)
+- **Modular Architecture** (feature + shared-core модули)
+- **Decompose**
+- **MVIKotlin**
+- **Ktor**
+- **Koin**
+- **Room**
 
-### Build and Run iOS Application
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+### Модули проекта
 
----
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+| Модуль                        | Назначение |
+|------------------------------|----------|
+| `composeApp`                 | Общий Compose UI и точка входа |
+| `androidApp`                 | Android-entry point |
+| `feature-authorization`      | Авторизация |
+| `feature-registration`       | Регистрация |
+| `feature-project-select`     | Выбор проекта |
+| `feature-project-mapview`    | Просмотр карты проектов |
+| `feature-user-profile`       | Профиль пользователя |
+| `shared-core-*`              | Общие слои (data, network, database, utils, components) |
